@@ -179,8 +179,11 @@ static void main_timer_cb(void* ctx) {
     with_view_model(view, MainViewModel * vm, { vm->frame++; }, true);
 }
 
+/* enter/exit receive the view's context (the Sonar app); reach the View through
+ * app->main_view. */
 static void main_enter(void* ctx) {
-    View* view = ctx;
+    Sonar* app = ctx;
+    View* view = app->main_view;
     with_view_model(
         view,
         MainViewModel * vm,
@@ -194,7 +197,8 @@ static void main_enter(void* ctx) {
 }
 
 static void main_exit(void* ctx) {
-    View* view = ctx;
+    Sonar* app = ctx;
+    View* view = app->main_view;
     with_view_model(
         view, MainViewModel * vm, { if(vm->timer) furi_timer_stop(vm->timer); }, false);
 }

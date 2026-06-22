@@ -46,7 +46,10 @@ static void session_changed(VariableItem* item) {
     char buf[4];
     snprintf(buf, sizeof(buf), "%u", i);
     variable_item_set_current_value_text(item, buf);
+    /* The worker reads tracked_session under app->mutex; guard the write too. */
+    furi_mutex_acquire(app->mutex, FuriWaitForever);
     app->config.tracked_session = i;
+    furi_mutex_release(app->mutex);
     sonar_config_save(&app->config);
 }
 
