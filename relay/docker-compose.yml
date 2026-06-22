@@ -1,0 +1,33 @@
+# Self-host the relay with a Caddy TLS terminator in front.
+# `docker compose up` then point the installer at wss://<your-domain>/egress
+# and https://<your-domain>/ingest.
+services:
+  relay:
+    build: .
+    restart: unless-stopped
+    environment:
+      - PORT=8787
+      - HOST=0.0.0.0
+      - HEARTBEAT_MS=10000
+    expose:
+      - "8787"
+
+  # TLS terminator. Replace example.com with your domain; Caddy gets certs
+  # automatically via Let's Encrypt. Remove this and use --self-host on a
+  # trusted LAN if you don't need TLS.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - relay
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

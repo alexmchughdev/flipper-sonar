@@ -1,0 +1,6 @@
+# Replace example.com with your domain. Caddy terminates TLS and forwards plain
+# HTTP/WS to the relay, setting x-forwarded-proto: https so the relay accepts
+# ingest. WebSocket upgrades pass through transparently.
+example.com {
+	reverse_proxy relay:8787
+}
