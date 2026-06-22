@@ -1,0 +1,25 @@
+{
+  "name": "flipper-sonar",
+  "version": "0.1.0",
+  "description": "Ambient Claude Code status display on a Flipper Zero. This package is the npx-runnable installer for the Claude Code side.",
+  "type": "module",
+  "bin": {
+    "flipper-sonar": "installer/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "installer/index.js",
+    "installer/lib/",
+    "installer/runtime/"
+  ],
+  "scripts": {
+    "test:installer": "node --test installer/test/*.test.js",
+    "test:relay": "cd relay && npm test",
+    "test:proto": "cd proto && node --test --experimental-strip-types test/*.test.ts",
+    "test:e2e": "node --test --experimental-strip-types e2e/*.test.mjs",
+    "test": "npm run test:proto && npm run test:relay && npm run test:installer && npm run test:e2e"
+  },
+  "license": "MIT"
+}

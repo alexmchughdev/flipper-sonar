@@ -1,0 +1,22 @@
+{
+  "name": "flipper-sonar-installer",
+  "version": "0.1.0",
+  "description": "Installer for the Claude Code side of Flipper Sonar: hooks + statusline + attribution settings.",
+  "type": "module",
+  "bin": {
+    "flipper-sonar": "index.js"
+  },
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "files": [
+    "index.js",
+    "lib/",
+    "runtime/"
+  ],
+  "license": "MIT"
+}

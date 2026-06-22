@@ -35,6 +35,20 @@ of context each; this is a log, not a discussion.
   step. Uses only Node stdlib (fs, path, https). JSON settings merge is
   hand-rolled to avoid clobbering unrelated keys.
 
+## Installer / hooks
+- **Command-type hooks running a host-side poster**, not raw `http` hooks. SPEC
+  §4.1 suggests the `http` hook type, but the hard rule "cwd never leaves the
+  host as more than a basename, enforced in code" requires stripping to happen
+  ON the host before transmission. A tiny zero-dep Node poster
+  (`sonar-hook.mjs`) does the basename reduction and never reads
+  `transcript_path`, then POSTs. The relay enforces the same contract again as
+  defense in depth.
+- **User-level settings by default** (`~/.claude/settings.json`) so telemetry
+  works from any cwd; `--project` targets `./.claude/settings.json`.
+- **Sidecar manifest** (`~/.claude/flipper-sonar/install.json`) records exactly
+  what keys/hooks the installer added, so `--uninstall` is precise and never
+  removes the user's unrelated hooks or settings.
+
 ## Session selection
 - When multiple `session_id`s post to one sonar ID, the relay forwards all but
   tags each frame with a 1-byte session slot. The FAP tracks a selectable
