@@ -1,0 +1,20 @@
+# Target + flash for the ESP32-S2 WiFi Dev Board.
+CONFIG_IDF_TARGET="esp32s2"
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# Custom partition table (factory app + nvs).
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# TLS: use the bundled root CA set so the relay's cert verifies out of the box.
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+
+# WebSocket client.
+CONFIG_WS_TRANSPORT=y
+
+# Reasonable main task stack for cJSON parsing.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
+
+# Quieter logs in production; raise for debugging.
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y

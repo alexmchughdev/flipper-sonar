@@ -279,6 +279,88 @@ static inline size_t sonar_build_provision(
     return sonar_encode(SONAR_T_PROVISION, pl, n, out, out_cap);
 }
 
+/* ---- Decoders (mirror sonar_uart.ts). Return 1 on success, 0 on malformed. ---- */
+
+typedef struct {
+    uint8_t session;
+    uint8_t flags; /* SONAR_F_* — which fields are valid */
+    uint8_t ctx_pct;
+    uint8_t five_hr_pct;
+    uint8_t seven_day_pct;
+    uint16_t cost_cents;
+    char model[SONAR_MAX_STR + 1];
+} SonarStats;
+
+typedef struct {
+    uint8_t session;
+    uint8_t state;
+    char tool[SONAR_MAX_STR + 1];
+    char project[SONAR_MAX_STR + 1];
+} SonarEvent;
+
+typedef struct {
+    char ssid[64];
+    char pass[64];
+    char relay_url[128];
+    char sonar_id[16];
+} SonarProvision;
+
+/* Read a length-prefixed string at *off into dst (cap incl. NUL). 1 on success. */
+static inline int
+    sonar__read_str(const uint8_t* p, uint8_t len, size_t* off, char* dst, size_t cap) {
+    if(*off >= len) return 0;
+    uint8_t slen = p[(*off)++];
+    if(*off + slen > len) return 0;
+    size_t n = slen < cap - 1 ? slen : cap - 1;
+    if(n) memcpy(dst, p + *off, n);
+    dst[n] = '\0';
+    *off += slen;
+    return 1;
+}
+
+static inline int sonar_decode_stats(const uint8_t* p, uint8_t len, SonarStats* s) {
+    if(len < 8) return 0;
+    size_t off = 0;
+    s->session = p[off++];
+    s->flags = p[off++];
+    s->ctx_pct = p[off++];
+    s->five_hr_pct = p[off++];
+    s->seven_day_pct = p[off++];
+    s->cost_cents = (uint16_t)(p[off] | (p[off + 1] << 8));
+    off += 2;
+    s->model[0] = '\0';
+    sonar__read_str(p, len, &off, s->model, sizeof(s->model));
+    return 1;
+}
+
+static inline int sonar_decode_event(const uint8_t* p, uint8_t len, SonarEvent* e) {
+    if(len < 2) return 0;
+    size_t off = 0;
+    e->session = p[off++];
+    e->state = p[off++];
+    e->tool[0] = '\0';
+    e->project[0] = '\0';
+    sonar__read_str(p, len, &off, e->tool, sizeof(e->tool));
+    sonar__read_str(p, len, &off, e->project, sizeof(e->project));
+    return 1;
+}
+
+static inline int sonar_decode_link(const uint8_t* p, uint8_t len, uint8_t* link) {
+    if(len < 1) return 0;
+    *link = p[0];
+    return 1;
+}
+
+static inline int sonar_decode_provision(const uint8_t* p, uint8_t len, SonarProvision* pr) {
+    size_t off = 0;
+    pr->ssid[0] = pr->pass[0] = pr->relay_url[0] = pr->sonar_id[0] = '\0';
+    if(!sonar__read_str(p, len, &off, pr->ssid, sizeof(pr->ssid))) return 0;
+    if(!sonar__read_str(p, len, &off, pr->pass, sizeof(pr->pass))) return 0;
+    if(!sonar__read_str(p, len, &off, pr->relay_url, sizeof(pr->relay_url))) return 0;
+    if(!sonar__read_str(p, len, &off, pr->sonar_id, sizeof(pr->sonar_id))) return 0;
+    return 1;
+}
+
 #ifdef __cplusplus
 }
 #endif
