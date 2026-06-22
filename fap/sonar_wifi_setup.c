@@ -53,7 +53,7 @@ static void popup_back_to_menu(void* ctx) {
 }
 
 void sonar_show_paired_popup(Sonar* app) {
-    static char msg[64];
+    static char msg[96];
     snprintf(
         msg,
         sizeof(msg),

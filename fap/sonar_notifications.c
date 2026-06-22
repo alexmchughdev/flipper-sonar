@@ -79,15 +79,23 @@ void sonar_notify_transition(Sonar* app, uint8_t old_state, uint8_t new_state) {
     bool sound = app->config.sound;
     if(!haptics && !sound) return;
 
+    /* if/else, not a ternary: each &seq_* is a pointer to a differently-sized
+     * array, which a conditional expression refuses to unify. */
     const NotificationSequence* seq;
     if(to_approval) {
-        seq = (haptics && sound) ? &seq_approval :
-              haptics            ? &seq_approval_vibro :
-                                   &seq_approval_sound;
+        if(haptics && sound)
+            seq = &seq_approval;
+        else if(haptics)
+            seq = &seq_approval_vibro;
+        else
+            seq = &seq_approval_sound;
     } else {
-        seq = (haptics && sound) ? &seq_done :
-              haptics            ? &seq_done_vibro :
-                                   &seq_done_sound;
+        if(haptics && sound)
+            seq = &seq_done;
+        else if(haptics)
+            seq = &seq_done_vibro;
+        else
+            seq = &seq_done_sound;
     }
     notification_message(app->notifications, seq);
 }
