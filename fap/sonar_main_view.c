@@ -1,5 +1,6 @@
 #include "sonar_i.h"
 #include <gui/elements.h>
+#include <math.h>
 
 #define ANIM_PERIOD_MS 150
 
@@ -7,43 +8,56 @@ typedef struct {
     Sonar* app;
     FuriTimer* timer;
     uint8_t frame; /* animation frame counter */
+    int preview; /* -1 = live state; 0..4 = forced state for sprite preview (OK key) */
 } MainViewModel;
 
-/* ---- sprite: a tiny dolphin/sonar glyph whose pose is driven by state ---- */
-static void draw_sprite(Canvas* canvas, int x, int y, uint8_t state, uint8_t frame) {
-    /* body: a small rounded blob */
-    canvas_draw_circle(canvas, x + 6, y + 6, 5);
-    canvas_draw_dot(canvas, x + 9, y + 4); /* eye */
-
-    switch(state) {
-    case SONAR_STATE_WORKING: {
-        /* ping pulse: expanding arcs to the right, animated by frame */
-        int r = 3 + (frame % 4) * 2;
-        canvas_draw_circle(canvas, x + 6, y + 6, r > 11 ? 11 : r);
-        break;
+/*
+ * The Claude "spark" — a radial sunburst — rendered 1-bit and animated by state.
+ * Drawn procedurally (12 rays, alternating long/short) so it rotates/breathes
+ * crisply at any size. There is no official Claude Code sprite bitmap to copy;
+ * to trace an exact pixel reference, drop a PNG and we convert it to an XBM.
+ */
+static void draw_spark(Canvas* canvas, int cx, int cy, float angle, int rlong, int rshort) {
+    const int rays = 12;
+    for(int i = 0; i < rays; i++) {
+        float a = angle + (float)i * (2.0f * (float)M_PI / (float)rays);
+        int len = (i % 2 == 0) ? rlong : rshort;
+        int x2 = cx + (int)lroundf(cosf(a) * (float)len);
+        int y2 = cy + (int)lroundf(sinf(a) * (float)len);
+        canvas_draw_line(canvas, cx, cy, x2, y2);
     }
-    case SONAR_STATE_WAITING_APPROVAL: {
-        /* alert pose: exclamation above the head, blinking */
-        if(frame % 2) {
-            canvas_draw_line(canvas, x + 14, y, x + 14, y + 5);
-            canvas_draw_dot(canvas, x + 14, y + 7);
+    canvas_draw_disc(canvas, cx, cy, 1); /* solid core */
+}
+
+/* cx,cy = spark centre. Each state gets a distinct animation. */
+static void draw_sprite(Canvas* canvas, int cx, int cy, uint8_t state, uint8_t frame) {
+    switch(state) {
+    case SONAR_STATE_WORKING:
+        /* spinning spark — the "thinking" motion */
+        draw_spark(canvas, cx, cy, (float)frame * 0.45f, 7, 4);
+        break;
+    case SONAR_STATE_WAITING_APPROVAL:
+        draw_spark(canvas, cx, cy, 0.26f, 7, 4);
+        if(frame % 2) { /* blinking alert */
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str(canvas, cx + 11, cy + 4, "!");
+            canvas_set_font(canvas, FontSecondary);
         }
         break;
-    }
-    case SONAR_STATE_WAITING_INPUT: {
-        /* gentle question mark */
-        canvas_draw_str(canvas, x + 12, y + 6, "?");
+    case SONAR_STATE_WAITING_INPUT:
+        draw_spark(canvas, cx, cy, 0.26f, 7, 4);
+        canvas_draw_str(canvas, cx + 10, cy + 4, "?");
+        break;
+    case SONAR_STATE_DONE:
+        draw_spark(canvas, cx, cy, 0.26f, 7, 4);
+        canvas_draw_line(canvas, cx + 9, cy + 1, cx + 12, cy + 4); /* check */
+        canvas_draw_line(canvas, cx + 12, cy + 4, cx + 16, cy - 3);
+        break;
+    default: { /* idle: slow breathe + slow drift */
+        int b = 6 + (int)((frame / 4) % 3); /* 6..8 */
+        draw_spark(canvas, cx, cy, (float)frame * 0.05f, b, b - 3);
         break;
     }
-    case SONAR_STATE_DONE: {
-        /* check mark */
-        canvas_draw_line(canvas, x + 12, y + 6, x + 14, y + 8);
-        canvas_draw_line(canvas, x + 14, y + 8, x + 18, y + 2);
-        break;
-    }
-    default: /* idle: a small resting wave */
-        canvas_draw_line(canvas, x + 12, y + 8, x + 18, y + 8);
-        break;
     }
 }
 
@@ -135,15 +149,19 @@ static void main_draw(Canvas* canvas, void* model_v) {
     snprintf(buf, sizeof(buf), "$%u.%02u", m.cost_cents / 100, m.cost_cents % 100);
     draw_bar(canvas, 38, "$", m.cost_valid, cost_pct, buf);
 
-    /* State + sprite */
+    /* State + sprite. preview (OK key) forces a state so every sprite animation
+     * can be checked on-device before the telemetry pipeline is live. */
+    uint8_t disp_state = vm->preview >= 0 ? (uint8_t)vm->preview : m.state;
     canvas_draw_line(canvas, 0, 48, 127, 48);
     canvas_set_font(canvas, FontPrimary);
-    canvas_draw_str(canvas, 0, 60, state_label(m.state));
+    canvas_draw_str(canvas, 0, 60, state_label(disp_state));
     canvas_set_font(canvas, FontSecondary);
-    if(m.tool[0] && m.state == SONAR_STATE_WORKING) {
+    if(vm->preview >= 0) {
+        canvas_draw_str(canvas, 60, 60, "demo");
+    } else if(m.tool[0] && m.state == SONAR_STATE_WORKING) {
         canvas_draw_str(canvas, 44, 60, m.tool);
     }
-    draw_sprite(canvas, 104, 50, m.state, vm->frame);
+    draw_sprite(canvas, 110, 56, m.state, vm->frame);
 }
 
 static bool main_input(InputEvent* event, void* ctx) {
@@ -170,7 +188,18 @@ static bool main_input(InputEvent* event, void* ctx) {
         sonar_config_save(&app->config);
         return true;
     }
-    /* Back / Ok fall through to the dispatcher (navigates to the menu). */
+
+    if(event->key == InputKeyOk) {
+        /* Cycle the sprite preview: idle->working->approval->input->done->live. */
+        with_view_model(
+            app->main_view,
+            MainViewModel * vm,
+            { vm->preview = (vm->preview >= SONAR_STATE_DONE) ? -1 : vm->preview + 1; },
+            true);
+        return true;
+    }
+
+    /* Back falls through to the dispatcher (navigates to the menu). */
     return false;
 }
 
@@ -213,6 +242,7 @@ View* sonar_main_view_alloc(Sonar* app) {
             vm->app = app;
             vm->timer = NULL;
             vm->frame = 0;
+            vm->preview = -1;
         },
         false);
     view_set_context(view, app);
