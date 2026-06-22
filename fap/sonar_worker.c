@@ -1,5 +1,6 @@
 #include "sonar_i.h"
 #include "sonar_uart.h"
+#include <expansion/expansion.h>
 
 /* USART on the expansion header = pins 13 (TX) / 14 (RX), the channel that does
  * not fight the Flipper CLI on the USB/LPUART bridge. */
@@ -144,10 +145,20 @@ void sonar_worker_start(Sonar* app) {
     app->worker = furi_thread_alloc_ex("SonarWorker", 2048, worker_thread, app);
     furi_thread_start(app->worker);
 
+    /* The Expansion Module service owns USART (pins 13/14) by default to detect
+     * add-on boards. Disable it so we can use the port; we re-enable on exit. */
+    Expansion* expansion = furi_record_open(RECORD_EXPANSION);
+    expansion_disable(expansion);
+    furi_record_close(RECORD_EXPANSION);
+
+    /* Acquire gracefully: if the port is still busy, run without UART rather
+     * than aborting the whole system (a failed furi_check reboots the Flipper).
+     * The link simply stays "connecting" until the port frees up. */
     app->serial = furi_hal_serial_control_acquire(SONAR_SERIAL_ID);
-    furi_check(app->serial);
-    furi_hal_serial_init(app->serial, SONAR_BAUD);
-    furi_hal_serial_async_rx_start(app->serial, rx_isr, app, false);
+    if(app->serial) {
+        furi_hal_serial_init(app->serial, SONAR_BAUD);
+        furi_hal_serial_async_rx_start(app->serial, rx_isr, app, false);
+    }
 }
 
 void sonar_worker_stop(Sonar* app) {
@@ -169,6 +180,11 @@ void sonar_worker_stop(Sonar* app) {
         furi_stream_buffer_free(app->rx_stream);
         app->rx_stream = NULL;
     }
+
+    /* Hand USART back to the Expansion Module service. */
+    Expansion* expansion = furi_record_open(RECORD_EXPANSION);
+    expansion_enable(expansion);
+    furi_record_close(RECORD_EXPANSION);
 }
 
 void sonar_worker_send_provision(Sonar* app) {
