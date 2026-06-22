@@ -80,18 +80,20 @@ static const char* state_label(uint8_t state) {
 static void draw_bar(
     Canvas* canvas,
     int y,
+    int h,
     const char* label,
     bool valid,
     uint8_t pct,
     const char* value) {
-    const int bx = 20, bw = 70, bh = 7;
-    canvas_draw_str(canvas, 0, y + 6, label);
-    canvas_draw_frame(canvas, bx, y, bw, bh);
+    const int bx = 34, bw = 60;
+    int texty = y + h - 1; /* baseline near the bar's vertical centre */
+    canvas_draw_str(canvas, 0, texty, label);
+    canvas_draw_frame(canvas, bx, y, bw, h);
     if(valid) {
         int fill = (bw - 2) * pct / 100;
-        if(fill > 0) canvas_draw_box(canvas, bx + 1, y + 1, fill, bh - 2);
+        if(fill > 0) canvas_draw_box(canvas, bx + 1, y + 1, fill, h - 2);
     }
-    canvas_draw_str(canvas, bx + bw + 3, y + 6, valid ? value : "--");
+    canvas_draw_str(canvas, bx + bw + 3, texty, valid ? value : "--");
 }
 
 static void draw_link_glyph(Canvas* canvas, SonarLink link, uint8_t frame) {
@@ -117,10 +119,8 @@ static void main_draw(Canvas* canvas, void* model_v) {
     /* Snapshot the shared model under the lock; draw from the copy so the
      * critical section stays tiny and the worker is never blocked on rendering. */
     SonarModel m;
-    uint16_t cost_cap;
     furi_mutex_acquire(app->mutex, FuriWaitForever);
     m = app->model;
-    cost_cap = app->config.cost_cap_cents;
     furi_mutex_release(app->mutex);
 
     canvas_set_font(canvas, FontSecondary);
@@ -131,23 +131,15 @@ static void main_draw(Canvas* canvas, void* model_v) {
     draw_link_glyph(canvas, m.link, vm->frame);
     canvas_draw_line(canvas, 0, 9, 127, 9);
 
-    /* Bars */
+    /* Three usage bars: session (context fill), 5h limit, weekly (7d) limit.
+     * No cost — usage is what matters regardless of plan. */
     char buf[16];
     snprintf(buf, sizeof(buf), "%u%%", m.ctx_pct);
-    draw_bar(canvas, 11, "CTX", m.ctx_valid, m.ctx_pct, buf);
+    draw_bar(canvas, 12, 9, "SESS", m.ctx_valid, m.ctx_pct, buf);
     snprintf(buf, sizeof(buf), "%u%%", m.five_pct);
-    draw_bar(canvas, 20, "5H", m.five_valid, m.five_pct, buf);
+    draw_bar(canvas, 24, 9, "5H", m.five_valid, m.five_pct, buf);
     snprintf(buf, sizeof(buf), "%u%%", m.seven_pct);
-    draw_bar(canvas, 29, "7D", m.seven_valid, m.seven_pct, buf);
-
-    /* Cost bar: proportional to the user's soft cap. */
-    uint8_t cost_pct = 0;
-    if(cost_cap > 0 && m.cost_valid) {
-        uint32_t p = (uint32_t)m.cost_cents * 100u / cost_cap;
-        cost_pct = p > 100 ? 100 : (uint8_t)p;
-    }
-    snprintf(buf, sizeof(buf), "$%u.%02u", m.cost_cents / 100, m.cost_cents % 100);
-    draw_bar(canvas, 38, "$", m.cost_valid, cost_pct, buf);
+    draw_bar(canvas, 36, 9, "WEEK", m.seven_valid, m.seven_pct, buf);
 
     /* State + sprite. preview (OK key) forces a state so every sprite animation
      * can be checked on-device before the telemetry pipeline is live. */
@@ -161,7 +153,7 @@ static void main_draw(Canvas* canvas, void* model_v) {
     } else if(m.tool[0] && m.state == SONAR_STATE_WORKING) {
         canvas_draw_str(canvas, 44, 60, m.tool);
     }
-    draw_sprite(canvas, 110, 56, m.state, vm->frame);
+    draw_sprite(canvas, 110, 56, disp_state, vm->frame);
 }
 
 static bool main_input(InputEvent* event, void* ctx) {

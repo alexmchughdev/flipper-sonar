@@ -12,7 +12,6 @@ void sonar_config_default(SonarConfig* c) {
     /* Placeholder hosted relay; overridden by the installer's --relay or by
      * re-provisioning. See docs/blocked.md. */
     strlcpy(c->relay_url, "wss://relay.flipper-sonar.dev", sizeof(c->relay_url));
-    c->cost_cap_cents = 2000; /* $20 default soft cap */
     c->haptics = true;
     c->sound = true;
     c->tracked_session = 0;
@@ -37,8 +36,6 @@ bool sonar_config_load(SonarConfig* c) {
             strlcpy(c->relay_url, furi_string_get_cstr(tmp), sizeof(c->relay_url));
 
         uint32_t u32;
-        if(flipper_format_read_uint32(ff, "cost_cap_cents", &u32, 1))
-            c->cost_cap_cents = (uint16_t)u32;
         if(flipper_format_read_uint32(ff, "haptics", &u32, 1)) c->haptics = u32 != 0;
         if(flipper_format_read_uint32(ff, "sound", &u32, 1)) c->sound = u32 != 0;
         if(flipper_format_read_uint32(ff, "tracked_session", &u32, 1))
@@ -62,9 +59,7 @@ bool sonar_config_save(const SonarConfig* c) {
         if(!flipper_format_write_header_cstr(ff, CONFIG_HEADER, CONFIG_VERSION)) break;
         if(!flipper_format_write_string_cstr(ff, "sonar_id", c->sonar_id)) break;
         if(!flipper_format_write_string_cstr(ff, "relay_url", c->relay_url)) break;
-        uint32_t u32 = c->cost_cap_cents;
-        if(!flipper_format_write_uint32(ff, "cost_cap_cents", &u32, 1)) break;
-        u32 = c->haptics ? 1 : 0;
+        uint32_t u32 = c->haptics ? 1 : 0;
         if(!flipper_format_write_uint32(ff, "haptics", &u32, 1)) break;
         u32 = c->sound ? 1 : 0;
         if(!flipper_format_write_uint32(ff, "sound", &u32, 1)) break;
