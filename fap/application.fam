@@ -1,0 +1,14 @@
+App(
+    appid="sonar",
+    name="Sonar",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="sonar_app",
+    stack_size=4 * 1024,
+    fap_category="Tools",
+    fap_author="flipper-sonar",
+    fap_version="0.1",
+    fap_description="Ambient Claude Code status display: bars, sprite, vibro/chime.",
+    # fap_icon is optional for local builds; required for the App Catalog. See
+    # docs/blocked.md for catalog submission status.
+    requires=["gui", "notification"],
+)
