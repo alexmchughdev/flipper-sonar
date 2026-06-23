@@ -112,11 +112,14 @@ static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame
         canvas_draw_box(c, elx + 1, ey, ew, eh);
         canvas_draw_box(c, erx + 1, ey, ew, eh);
         break;
-    case SONAR_STATE_DONE: /* small happy eyes + smile */
-        canvas_draw_box(c, elx, ey, ew, 2);
-        canvas_draw_box(c, erx, ey, ew, 2);
-        canvas_draw_box(c, ox + 4 * bs, oy + 3 * bs, bs, 2);
+    case SONAR_STATE_DONE: { /* happy ">  <" chevron eyes */
+        int cw = 3, midy = ey + eh / 2;
+        canvas_draw_line(c, ox + 2 * bs, ey, ox + 2 * bs + cw, midy);
+        canvas_draw_line(c, ox + 2 * bs + cw, midy, ox + 2 * bs, ey + eh);
+        canvas_draw_line(c, ox + 6 * bs + cw, ey, ox + 6 * bs, midy);
+        canvas_draw_line(c, ox + 6 * bs, midy, ox + 6 * bs + cw, ey + eh);
         break;
+    }
     default: /* working */
         canvas_draw_box(c, elx, ey, ew, eh);
         canvas_draw_box(c, erx, ey, ew, eh);
@@ -184,8 +187,20 @@ static void main_draw(Canvas* canvas, void* model_v) {
     draw_link_glyph(canvas, m.link, vm->frame);
     canvas_draw_line(canvas, 0, 9, 127, 9);
 
+    /* The done celebration face (> <) shows only briefly, then the face reverts
+     * to normal even though the state stays 'done'. */
+    uint8_t face_state = disp_state;
+    if(disp_state == SONAR_STATE_DONE) {
+        bool celebrate = vm->preview >= 0; /* always show it in preview */
+        if(!celebrate && m.state_tick) {
+            uint32_t now = furi_get_tick();
+            if(now - m.state_tick < furi_ms_to_ticks(3000)) celebrate = true;
+        }
+        if(!celebrate) face_state = SONAR_STATE_IDLE;
+    }
+
     /* Left: the Claude creature */
-    int cright = draw_creature(canvas, 24, 28, disp_state, vm->frame);
+    int cright = draw_creature(canvas, 24, 28, face_state, vm->frame);
 
     /* Attention glyph next to the sprite: ! when input is needed, ? for approval. */
     if(disp_state == SONAR_STATE_WAITING_INPUT || disp_state == SONAR_STATE_WAITING_APPROVAL) {

@@ -50,11 +50,22 @@ LEG_H = BS + 1
 for lx in [l1, l2, r2, r1]:
     box(lx, ly, LEG_W, LEG_H)
 
-# eyes: thin slits, col2 & col6, sitting just above the tab row (row1)
+# DONE face: > < happy chevron eyes (white-punched) instead of slits
 ey = oy + 1*BS
 EYE_H = BS
-box(ox + 2*BS + 1, ey, EYE_W, EYE_H, BLACK)
-box(ox + 6*BS + 1, ey, EYE_W, EYE_H, BLACK)
+def line(x1, y1, x2, y2, w=2):
+    d.line([(x1*SCALE, y1*SCALE), (x2*SCALE, y2*SCALE)], fill=BLACK, width=w*SCALE//SCALE*SCALE//SCALE or SCALE//2)
+def chev(cx0, pointing_right):
+    cw = 3
+    midy = ey + EYE_H // 2
+    if pointing_right:  # ">"
+        d.line([((cx0)*SCALE, ey*SCALE), ((cx0+cw)*SCALE, midy*SCALE)], fill=BLACK, width=SCALE)
+        d.line([((cx0+cw)*SCALE, midy*SCALE), ((cx0)*SCALE, (ey+EYE_H)*SCALE)], fill=BLACK, width=SCALE)
+    else:  # "<"
+        d.line([((cx0+cw)*SCALE, ey*SCALE), ((cx0)*SCALE, midy*SCALE)], fill=BLACK, width=SCALE)
+        d.line([((cx0)*SCALE, midy*SCALE), ((cx0+cw)*SCALE, (ey+EYE_H)*SCALE)], fill=BLACK, width=SCALE)
+chev(ox + 2*BS, True)
+chev(ox + 6*BS, False)
 
 img.save("/tmp/clawd.png")
 print("saved /tmp/clawd.png")

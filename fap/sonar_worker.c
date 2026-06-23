@@ -105,6 +105,7 @@ static void apply_frame(
             *notify_old = m->state;
             *notify_new = e.state;
             fire = true;
+            m->state_tick = furi_get_tick(); /* for the done celebration timeout */
             /* Start the run timer when work begins. */
             if(e.state == SONAR_STATE_WORKING) m->work_start_tick = furi_get_tick();
         }

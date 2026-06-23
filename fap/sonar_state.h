@@ -41,6 +41,7 @@ typedef struct {
     char tool[SONAR_MAX_STR + 1];
     char project[SONAR_MAX_STR + 1];
     uint32_t work_start_tick; /* furi tick when 'working' began (for the run timer) */
+    uint32_t state_tick; /* furi tick of the last state change (e.g. done celebration) */
 
     /* freshness */
     uint32_t last_rx_tick; /* furi_get_tick() of last frame */
@@ -60,6 +61,7 @@ static inline void sonar_model_init(SonarModel* m) {
     m->tool[0] = '\0';
     m->project[0] = '\0';
     m->work_start_tick = 0;
+    m->state_tick = 0;
     m->last_rx_tick = 0;
     m->active_session = 0;
     m->seen_sessions = 0;
