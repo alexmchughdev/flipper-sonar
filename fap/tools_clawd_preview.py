@@ -21,29 +21,33 @@ def box(x, y, w, h, color=ORANGE):
 ox, oy = 8, 8
 # body grid: '#' filled. cols 0..8 (col0/col8 are side tabs)
 G = [
-    ".#######.",   # head
-    ".#######.",   # head (eyes)
-    "#########",   # tabs (2 rows tall, centered)
-    "#########",   # tabs
-    ".#######.",   # lower body
+    ".#######.",
+    ".#######.",
+    ".#######.",
+    ".#######.",
+    ".#######.",
 ]
 for r, row in enumerate(G):
     for col, ch in enumerate(row):
         if ch == '#':
             box(ox + col*BS, oy + r*BS, BS, BS)
 
+# square side tabs (1 block) at the vertical middle
+box(ox + 0*BS, oy + 2*BS, BS, BS)
+box(ox + 8*BS, oy + 2*BS, BS, BS)
+
 # legs: 4 fat legs, width ~2.5x eye width
 EYE_W = 2
-LEG_W = 5          # ~2.5x eye
+LEG_W = 4          # ~2x eye (a touch less chunky)
 leg_cols_px = [ox+1*BS+1, ox+2*BS+2, ox+5*BS+1, ox+6*BS+2]  # two pairs
 ly = oy + 5*BS
 LEG_H = BS + 1
 for lx in leg_cols_px:
     box(lx, ly, LEG_W, LEG_H)
 
-# eyes: punch black, tall thin, col2 & col6
-ey = oy + BS + 1
-EYE_H = BS + 2
+# eyes: punch black, tall thin, col2 & col6, sitting just above the tab row
+ey = oy + BS
+EYE_H = BS
 box(ox + 2*BS + 1, ey, EYE_W, EYE_H, BLACK)
 box(ox + 6*BS + 1, ey, EYE_W, EYE_H, BLACK)
 
