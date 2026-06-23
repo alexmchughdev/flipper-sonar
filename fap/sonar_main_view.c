@@ -59,11 +59,12 @@ static void draw_spark(Canvas* c, int cx, int cy, float angle, int rlong, int rs
  * Returns the body's right edge x so the caller can place a glyph beside it. ---- */
 static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame) {
     const int bs = 5;
+    /* head (2 rows), chunky side-tab band (2 rows), lower body (1 row) */
     static const char* const G[5] = {
         ".#######.",
         ".#######.",
-        ".#######.",
-        "#########", /* side tabs stick out here */
+        "#########", /* side tabs stick out here (2 rows tall) */
+        "#########",
         ".#######.",
     };
     int bob = ((frame / 6) % 2) ? 1 : 0;
@@ -75,12 +76,12 @@ static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame
         for(int col = 0; col < 9; col++)
             if(G[r][col] == '#') canvas_draw_box(c, ox + col * bs, oy + r * bs, bs, bs);
 
-    /* four thin legs in two pairs (left pair cols 2-3, right pair cols 5-6) */
-    int ly = oy + 5 * bs, lh = bs + 1, lw = bs - 3;
-    canvas_draw_box(c, ox + 2 * bs + 1, ly, lw, lh);
-    canvas_draw_box(c, ox + 3 * bs + 1, ly, lw, lh);
+    /* four legs in two pairs, each ~2.5x the eye-slit width */
+    int ly = oy + 5 * bs, lh = bs + 1, lw = bs;
+    canvas_draw_box(c, ox + 1 * bs + 1, ly, lw, lh);
+    canvas_draw_box(c, ox + 2 * bs + 2, ly, lw, lh);
     canvas_draw_box(c, ox + 5 * bs + 1, ly, lw, lh);
-    canvas_draw_box(c, ox + 6 * bs + 1, ly, lw, lh);
+    canvas_draw_box(c, ox + 6 * bs + 2, ly, lw, lh);
 
     /* eyes, punched white */
     canvas_set_color(c, ColorWhite);
