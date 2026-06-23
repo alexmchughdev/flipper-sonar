@@ -9,16 +9,36 @@ typedef struct {
     FuriTimer* timer;
     uint8_t frame; /* animation frame counter */
     int preview; /* -1 = live state; 0..4 = forced state for sprite preview (OK key) */
+    uint32_t phrase_key; /* identity of the current phrase slot (session + 3s bucket) */
+    uint16_t phrase_idx; /* currently shown spinner verb */
 } MainViewModel;
 
-/* Claude's working words. Rotates while working, like the CLI. ASCII only so the
- * default font renders them. */
+/* Claude Code's spinner verbs (the full default set). A random one is shown
+ * while working and re-rolled every few seconds. Stored lowercase (ASCII so the
+ * default font renders them); the first letter is capitalised at draw time. */
 static const char* const PHRASES[] = {
-    "Spelunking",   "Sauteing",   "Channelling", "Herding",      "Vibing",
-    "Pondering",    "Noodling",   "Conjuring",   "Percolating",  "Marinating",
-    "Ruminating",   "Tinkering",  "Brewing",     "Finagling",    "Cogitating",
-    "Wrangling",    "Simmering",  "Mulling",     "Computing",    "Incubating",
-    "Synthesizing", "Galloping",  "Whirring",    "Schlepping",
+    "beaming",     "booping",     "bouncing",    "brewing",      "bubbling",
+    "chasing",     "churning",    "coalescing",  "conjuring",    "cooking",
+    "crafting",    "crunching",   "cuddling",    "dancing",      "dazzling",
+    "discovering", "doodling",    "dreaming",    "drifting",     "enchanting",
+    "exploring",   "finding",     "floating",    "fluttering",   "foraging",
+    "forging",     "frolicking",  "gathering",   "giggling",     "gliding",
+    "greeting",    "growing",     "hatching",    "herding",      "honking",
+    "hopping",     "hugging",     "humming",     "imagining",    "inventing",
+    "jingling",    "juggling",    "jumping",     "kindling",     "knitting",
+    "launching",   "leaping",     "mapping",     "marinating",   "meandering",
+    "mixing",      "moseying",    "munching",    "napping",      "nibbling",
+    "noodling",    "orbiting",    "painting",    "percolating",  "petting",
+    "plotting",    "pondering",   "popping",     "prancing",     "purring",
+    "puzzling",    "questing",    "riding",      "roaming",      "rolling",
+    "sauteing",    "scribbling",  "seeking",     "shimmying",    "singing",
+    "skipping",    "sleeping",    "snacking",    "sniffing",     "snuggling",
+    "soaring",     "sparking",    "spinning",    "splashing",    "sprouting",
+    "squishing",   "stargazing",  "stirring",    "strolling",    "swimming",
+    "swinging",    "tickling",    "tinkering",   "toasting",     "tumbling",
+    "twirling",    "waddling",    "wandering",   "watching",     "weaving",
+    "whistling",   "wibbling",    "wiggling",    "wishing",      "wobbling",
+    "wondering",   "yawning",     "zooming",
 };
 #define PHRASE_COUNT (sizeof(PHRASES) / sizeof(PHRASES[0]))
 
@@ -38,11 +58,10 @@ static void draw_spark(Canvas* c, int cx, int cy, float angle, int rlong, int rs
  * reacts to state. cx,cy = centre. ---- */
 static void draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame) {
     const int bs = 4; /* block size */
-    /* Clawd: 9-wide x 7-tall block grid; '#' = body. Ears on top (close, 1-gap),
-     * wide mid with side tabs, four legs. */
-    static const char* const G[7] = {
-        "..##.##..",
-        "..##.##..",
+    /* Clawd: solid chunky body (no ears). Slightly inset top corners, a wide mid
+     * with side tabs, and four legs. The two black rects are EYES, punched out. */
+    static const char* const G[6] = {
+        ".#######.",
         "#########",
         "#########",
         "#########",
@@ -52,19 +71,19 @@ static void draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t fram
     int bob = ((frame / 6) % 2) ? 1 : 0;
     int sx = (state == SONAR_STATE_WAITING_APPROVAL) ? ((frame % 2) ? 1 : -1) : 0; /* shake */
     int ox = cx - (9 * bs) / 2 + sx;
-    int oy = cy - (7 * bs) / 2 + bob;
+    int oy = cy - (6 * bs) / 2 + bob;
 
     /* body */
-    for(int r = 0; r < 7; r++)
+    for(int r = 0; r < 6; r++)
         for(int col = 0; col < 9; col++)
             if(G[r][col] == '#') canvas_draw_box(c, ox + col * bs, oy + r * bs, bs, bs);
     /* side tabs (little arms), mid height */
-    canvas_draw_box(c, ox - bs, oy + 3 * bs, bs, bs * 2);
-    canvas_draw_box(c, ox + 9 * bs, oy + 3 * bs, bs, bs * 2);
+    canvas_draw_box(c, ox - bs, oy + 2 * bs, bs, bs * 2);
+    canvas_draw_box(c, ox + 9 * bs, oy + 2 * bs, bs, bs * 2);
 
-    /* eyes: punched out of the body (white) — vertical notches like the ref */
+    /* eyes: punched out of the body (white) — tall vertical notches like the ref */
     canvas_set_color(c, ColorWhite);
-    int ey = oy + 2 * bs + 1;
+    int ey = oy + bs + 1;
     int eh = bs + 3;
     int elx = ox + 3 * bs + 1;
     int erx = ox + 5 * bs + 1;
@@ -89,7 +108,7 @@ static void draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t fram
     case SONAR_STATE_DONE: /* small happy eyes + smile notch */
         canvas_draw_box(c, elx, ey, bs - 2, bs - 1);
         canvas_draw_box(c, erx, ey, bs - 2, bs - 1);
-        canvas_draw_box(c, ox + 4 * bs, oy + 5 * bs, bs, 2);
+        canvas_draw_box(c, ox + 4 * bs, oy + 4 * bs, bs, 2);
         break;
     default: /* working */
         canvas_draw_box(c, elx, ey, bs - 2, eh);
@@ -201,7 +220,17 @@ static void main_draw(Canvas* canvas, void* model_v) {
             if(!freq) freq = 1000;
             if(now >= m.work_start_tick) secs = (now - m.work_start_tick) / freq;
         }
-        const char* ph = PHRASES[(secs / 3) % PHRASE_COUNT];
+        /* Pick a random verb per work-session, re-rolled every 3s. The key
+         * changes when the session restarts (work_start_tick) or the 3s bucket
+         * advances, so it never sticks on one word and varies each time. */
+        uint32_t key = m.work_start_tick + secs / 3 + (vm->preview >= 0 ? vm->frame / 24 : 0);
+        if(key != vm->phrase_key) {
+            vm->phrase_key = key;
+            vm->phrase_idx = furi_hal_random_get() % PHRASE_COUNT;
+        }
+        char ph[16];
+        strlcpy(ph, PHRASES[vm->phrase_idx], sizeof(ph));
+        if(ph[0] >= 'a' && ph[0] <= 'z') ph[0] = (char)(ph[0] - 32); /* capitalise */
 
         char line[72];
         if(m.tokens_valid) {
@@ -299,6 +328,8 @@ View* sonar_main_view_alloc(Sonar* app) {
             vm->timer = NULL;
             vm->frame = 0;
             vm->preview = -1;
+            vm->phrase_key = 0xFFFFFFFF;
+            vm->phrase_idx = 0;
         },
         false);
     view_set_context(view, app);
