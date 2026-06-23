@@ -59,9 +59,8 @@ static void draw_spark(Canvas* c, int cx, int cy, float angle, int rlong, int rs
  * Returns the body's right edge x so the caller can place a glyph beside it. ---- */
 static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame) {
     const int bs = 5;
-    /* uniform rectangular body (cols 1-7); square side tabs drawn separately */
-    static const char* const G[5] = {
-        ".#######.",
+    /* 4-row body: head (2 rows) -> square tab row -> gap below (1 row). */
+    static const char* const G[4] = {
         ".#######.",
         ".#######.",
         ".#######.",
@@ -70,24 +69,28 @@ static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame
     int bob = ((frame / 6) % 2) ? 1 : 0;
     int sx = (state == SONAR_STATE_WAITING_APPROVAL) ? ((frame % 2) ? 1 : -1) : 0; /* shake */
     int ox = cx - (9 * bs) / 2 + sx;
-    int oy = cy - (5 * bs) / 2 + bob;
+    int oy = cy - (4 * bs) / 2 + bob;
 
-    for(int r = 0; r < 5; r++)
+    for(int r = 0; r < 4; r++)
         for(int col = 0; col < 9; col++)
             if(G[r][col] == '#') canvas_draw_box(c, ox + col * bs, oy + r * bs, bs, bs);
 
-    /* square side tabs (one block) at the vertical middle */
+    /* square side tabs (bs x bs) at row2: head above = 2x tab height, gap below
+     * = tab height. */
     canvas_draw_box(c, ox + 0 * bs, oy + 2 * bs, bs, bs);
     canvas_draw_box(c, ox + 8 * bs, oy + 2 * bs, bs, bs);
 
-    /* four legs in two pairs, each ~2x the eye-slit width */
-    int ly = oy + 5 * bs, lh = bs + 1, lw = bs - 1;
-    canvas_draw_box(c, ox + 1 * bs + 1, ly, lw, lh);
-    canvas_draw_box(c, ox + 2 * bs + 2, ly, lw, lh);
-    canvas_draw_box(c, ox + 5 * bs + 1, ly, lw, lh);
-    canvas_draw_box(c, ox + 6 * bs + 2, ly, lw, lh);
+    /* four legs in two pairs, symmetric (left pair mirrored to the right). */
+    int ly = oy + 4 * bs, lh = bs + 1, lw = bs - 1;
+    int total = 9 * bs;
+    int l1 = ox + 1 * bs + 1, l2 = ox + 2 * bs + 2;
+    int r1 = ox + total - (l1 - ox) - lw, r2 = ox + total - (l2 - ox) - lw;
+    canvas_draw_box(c, l1, ly, lw, lh);
+    canvas_draw_box(c, l2, ly, lw, lh);
+    canvas_draw_box(c, r2, ly, lw, lh);
+    canvas_draw_box(c, r1, ly, lw, lh);
 
-    /* eyes, punched white, sitting just above the tab row */
+    /* eyes, punched white, sitting just above the tab row (row1). */
     canvas_set_color(c, ColorWhite);
     int elx = ox + 2 * bs + 1, erx = ox + 6 * bs + 1;
     int ey = oy + bs, ew = 2, eh = bs;

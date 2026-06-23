@@ -20,8 +20,8 @@ def box(x, y, w, h, color=ORANGE):
 # ---- creature params (tune these) ----
 ox, oy = 8, 8
 # body grid: '#' filled. cols 0..8 (col0/col8 are side tabs)
+# 4-row body: head (2 blocks) -> square tab row -> gap below (1 block)
 G = [
-    ".#######.",
     ".#######.",
     ".#######.",
     ".#######.",
@@ -32,21 +32,26 @@ for r, row in enumerate(G):
         if ch == '#':
             box(ox + col*BS, oy + r*BS, BS, BS)
 
-# square side tabs (1 block) at the vertical middle
+# square side tabs (BS x BS) at row2: head above = 2 blocks = 2x tab height,
+# gap below = 1 block = tab height
 box(ox + 0*BS, oy + 2*BS, BS, BS)
 box(ox + 8*BS, oy + 2*BS, BS, BS)
 
-# legs: 4 fat legs, width ~2.5x eye width
+# legs: 4 legs in two pairs, symmetric (mirror left pair to the right)
 EYE_W = 2
-LEG_W = 4          # ~2x eye (a touch less chunky)
-leg_cols_px = [ox+1*BS+1, ox+2*BS+2, ox+5*BS+1, ox+6*BS+2]  # two pairs
-ly = oy + 5*BS
+LEG_W = 4          # ~2x eye
+total = 9*BS
+l1 = ox + 1*BS + 1
+l2 = ox + 2*BS + 2
+r1 = ox + total - (l1 - ox) - LEG_W
+r2 = ox + total - (l2 - ox) - LEG_W
+ly = oy + 4*BS
 LEG_H = BS + 1
-for lx in leg_cols_px:
+for lx in [l1, l2, r2, r1]:
     box(lx, ly, LEG_W, LEG_H)
 
-# eyes: punch black, tall thin, col2 & col6, sitting just above the tab row
-ey = oy + BS
+# eyes: thin slits, col2 & col6, sitting just above the tab row (row1)
+ey = oy + 1*BS
 EYE_H = BS
 box(ox + 2*BS + 1, ey, EYE_W, EYE_H, BLACK)
 box(ox + 6*BS + 1, ey, EYE_W, EYE_H, BLACK)
