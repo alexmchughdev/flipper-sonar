@@ -223,7 +223,7 @@ static void main_draw(Canvas* canvas, void* model_v) {
         /* Pick a random verb per work-session, re-rolled every 3s. The key
          * changes when the session restarts (work_start_tick) or the 3s bucket
          * advances, so it never sticks on one word and varies each time. */
-        uint32_t key = m.work_start_tick + secs / 3 + (vm->preview >= 0 ? vm->frame / 24 : 0);
+        uint32_t key = m.work_start_tick + secs / 30 + (vm->preview >= 0 ? vm->frame / 24 : 0);
         if(key != vm->phrase_key) {
             vm->phrase_key = key;
             vm->phrase_idx = furi_hal_random_get() % PHRASE_COUNT;
