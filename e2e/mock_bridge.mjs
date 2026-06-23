@@ -23,6 +23,7 @@ export function reframe(msg) {
       sevenDayPct: msg.sevenDayPct ?? null,
       costUsd: msg.costUsd ?? null,
       model: msg.model,
+      tokens: msg.tokens ?? null,
     });
   }
   if (msg.type === "event") {

@@ -33,11 +33,14 @@ typedef struct {
     bool seven_valid;
     uint16_t cost_cents;
     bool cost_valid;
+    uint32_t tokens; /* absolute output tokens */
+    bool tokens_valid;
 
     /* state + sprite */
     uint8_t state; /* SONAR_STATE_* */
     char tool[SONAR_MAX_STR + 1];
     char project[SONAR_MAX_STR + 1];
+    uint32_t work_start_tick; /* furi tick when 'working' began (for the run timer) */
 
     /* freshness */
     uint32_t last_rx_tick; /* furi_get_tick() of last frame */
@@ -51,9 +54,12 @@ static inline void sonar_model_init(SonarModel* m) {
     m->ctx_pct = m->five_pct = m->seven_pct = 0;
     m->ctx_valid = m->five_valid = m->seven_valid = m->cost_valid = false;
     m->cost_cents = 0;
+    m->tokens = 0;
+    m->tokens_valid = false;
     m->state = SONAR_STATE_IDLE;
     m->tool[0] = '\0';
     m->project[0] = '\0';
+    m->work_start_tick = 0;
     m->last_rx_tick = 0;
     m->active_session = 0;
     m->seen_sessions = 0;

@@ -61,6 +61,7 @@ extern "C" {
 #define SONAR_F_7D 0x04
 #define SONAR_F_COST 0x08
 #define SONAR_F_MODEL 0x10
+#define SONAR_F_TOKENS 0x20
 
 #define SONAR_MAX_PAYLOAD 254
 #define SONAR_MAX_FRAME (1 + 1 + 1 + SONAR_MAX_PAYLOAD + 1) /* SOF+LEN+TYPE+pl+CRC */
@@ -165,7 +166,8 @@ static inline int sonar_parser_push(SonarParser* p, uint8_t b, SonarFrame* out) 
 
 /*
  * Stats. Pass -1 for any percentage that is absent (flag cleared). cost_cents
- * < 0 means absent. model may be NULL/empty.
+ * < 0 means absent. model may be NULL/empty. tokens_h is output tokens in units
+ * of 100 (e.g. 73 == 7.3k); < 0 means absent.
  */
 static inline size_t sonar_build_stats(
     uint8_t session,
@@ -174,9 +176,10 @@ static inline size_t sonar_build_stats(
     int seven_day_pct,
     int cost_cents,
     const char* model,
+    int tokens_h,
     uint8_t* out,
     size_t out_cap) {
-    uint8_t pl[8 + SONAR_MAX_STR];
+    uint8_t pl[10 + SONAR_MAX_STR];
     size_t n = 0;
     uint8_t flags = 0;
     size_t flags_idx;
@@ -209,6 +212,12 @@ static inline size_t sonar_build_stats(
             memcpy(pl + n, model, slen);
             n += slen;
         }
+    }
+    {
+        uint16_t th = (tokens_h >= 0) ? (uint16_t)(tokens_h > 65535 ? 65535 : tokens_h) : 0;
+        pl[n++] = (uint8_t)(th & 0xFF);
+        pl[n++] = (uint8_t)((th >> 8) & 0xFF);
+        if(tokens_h >= 0) flags |= SONAR_F_TOKENS;
     }
     pl[flags_idx] = flags;
     return sonar_encode(SONAR_T_STATS, pl, n, out, out_cap);
@@ -288,6 +297,7 @@ typedef struct {
     uint8_t five_hr_pct;
     uint8_t seven_day_pct;
     uint16_t cost_cents;
+    uint16_t tokens_h; /* output tokens in units of 100 (valid if SONAR_F_TOKENS) */
     char model[SONAR_MAX_STR + 1];
 } SonarStats;
 
@@ -330,6 +340,11 @@ static inline int sonar_decode_stats(const uint8_t* p, uint8_t len, SonarStats* 
     off += 2;
     s->model[0] = '\0';
     sonar__read_str(p, len, &off, s->model, sizeof(s->model));
+    s->tokens_h = 0;
+    if((s->flags & SONAR_F_TOKENS) && off + 2 <= len) {
+        s->tokens_h = (uint16_t)(p[off] | (p[off + 1] << 8));
+        off += 2;
+    }
     return 1;
 }
 

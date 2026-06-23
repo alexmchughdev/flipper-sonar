@@ -62,6 +62,13 @@ static void handle_message(const char* data, int len) {
     uint8_t session = (uint8_t)json_int(root, "session", 0);
 
     if(type && !strcmp(type, "stats")) {
+        /* tokens arrive as an absolute count; the frame carries units of 100. */
+        int tokens_h = -1;
+        {
+            const cJSON* tv = cJSON_GetObjectItemCaseSensitive(root, "tokens");
+            if(tv && cJSON_IsNumber(tv) && tv->valuedouble >= 0)
+                tokens_h = (int)(tv->valuedouble / 100.0 + 0.5);
+        }
         n = sonar_build_stats(
             session,
             json_pct(root, "ctxPct"),
@@ -69,6 +76,7 @@ static void handle_message(const char* data, int len) {
             json_pct(root, "sevenDayPct"),
             json_cost_cents(root, "costUsd"),
             json_str(root, "model"),
+            tokens_h,
             buf,
             sizeof(buf));
     } else if(type && !strcmp(type, "event")) {

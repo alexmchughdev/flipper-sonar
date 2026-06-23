@@ -50,7 +50,7 @@ const egressUrl = `${wsOrigin(args.relay)}/egress/${sonarId}`;
 // ---- protocol encoder (mirror of proto/sonar_uart.h) ----
 const SOF = 0x7e, T_STATS = 0x01, T_EVENT = 0x02, T_HEARTBEAT = 0x04;
 const STATE = { idle: 0, working: 1, "waiting-approval": 2, "waiting-input": 3, done: 4 };
-const F_CTX = 1, F_5H = 2, F_7D = 4, F_COST = 8, F_MODEL = 16;
+const F_CTX = 1, F_5H = 2, F_7D = 4, F_COST = 8, F_MODEL = 16, F_TOKENS = 32;
 const MAX_STR = 32;
 
 function crc8(bytes) {
@@ -89,6 +89,9 @@ function reframe(msg) {
     pl.push(cents & 0xff, (cents >> 8) & 0xff); if (msg.costUsd != null) flags |= F_COST;
     if (msg.model) flags |= F_MODEL;
     pushStr(pl, msg.model);
+    const th = msg.tokens != null ? Math.min(65535, Math.max(0, Math.round(msg.tokens / 100))) : 0;
+    pl.push(th & 0xff, (th >> 8) & 0xff);
+    if (msg.tokens != null) flags |= F_TOKENS;
     pl[fi] = flags;
     return encode(T_STATS, pl);
   }

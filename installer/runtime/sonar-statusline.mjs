@@ -110,6 +110,14 @@ export function buildStats(sonarId, j) {
   const cost = get(j, ["cost", "total_cost_usd"]);
   if (typeof cost === "number") payload.costUsd = cost;
 
+  // Output tokens — best effort across the field names Claude Code may expose.
+  const tokens =
+    get(j, ["cost", "total_output_tokens"]) ??
+    get(j, ["cost", "output_tokens"]) ??
+    get(j, ["context_window", "output_tokens"]) ??
+    get(j, ["output_tokens"]);
+  if (typeof tokens === "number") payload.tokens = tokens;
+
   const cwd = get(j, ["cwd"]) ?? get(j, ["workspace", "current_dir"]);
   if (typeof cwd === "string") payload.project = basename(cwd);
 

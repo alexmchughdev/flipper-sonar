@@ -44,6 +44,7 @@ export const F_5H = 0x02;
 export const F_7D = 0x04;
 export const F_COST = 0x08;
 export const F_MODEL = 0x10;
+export const F_TOKENS = 0x20;
 
 export const MAX_PAYLOAD = 254;
 export const MAX_STR = 32;
@@ -88,6 +89,7 @@ export interface StatsInput {
   sevenDayPct?: number | null;
   costUsd?: number | null;
   model?: string;
+  tokens?: number | null; // output tokens (absolute count)
 }
 
 export function buildStats(s: StatsInput): Uint8Array {
@@ -111,6 +113,13 @@ export function buildStats(s: StatsInput): Uint8Array {
   const model = s.model && s.model.length ? s.model : undefined;
   if (model) flags |= F_MODEL;
   pushStr(pl, model);
+  // tokens stored in units of 100 (uint16).
+  const th =
+    s.tokens != null && Number.isFinite(s.tokens)
+      ? Math.min(65535, Math.max(0, Math.round(s.tokens / 100)))
+      : 0;
+  pl.push(th & 0xff, (th >> 8) & 0xff);
+  if (s.tokens != null) flags |= F_TOKENS;
   pl[flagsIdx] = flags;
   return encode(T_STATS, Uint8Array.from(pl));
 }
@@ -158,6 +167,7 @@ export interface DecodedStats {
   sevenDayPct: number | null;
   costUsd: number | null;
   model: string | null;
+  tokens: number | null; // absolute output token count
 }
 export interface DecodedEvent {
   type: "event";
@@ -205,6 +215,11 @@ export function decodePayload(type: number, payload: Uint8Array): Decoded | null
     const cents = payload[off.i] | (payload[off.i + 1] << 8);
     off.i += 2;
     const model = readStr(payload, off);
+    let tokensH = 0;
+    if (flags & F_TOKENS && off.i + 2 <= payload.length) {
+      tokensH = payload[off.i] | (payload[off.i + 1] << 8);
+      off.i += 2;
+    }
     return {
       type: "stats",
       session,
@@ -213,6 +228,7 @@ export function decodePayload(type: number, payload: Uint8Array): Decoded | null
       sevenDayPct: flags & F_7D ? seven : null,
       costUsd: flags & F_COST ? cents / 100 : null,
       model: flags & F_MODEL ? model : null,
+      tokens: flags & F_TOKENS ? tokensH * 100 : null,
     };
   }
   if (type === T_EVENT) {

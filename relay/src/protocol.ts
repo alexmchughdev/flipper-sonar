@@ -47,6 +47,7 @@ export interface WireMessage {
   fiveHrPct?: number | null;
   sevenDayPct?: number | null;
   costUsd?: number | null;
+  tokens?: number | null;
   // link field
   link?: "connecting" | "online" | "stale";
 }
@@ -169,6 +170,13 @@ export function normalizeIngest(sonarId: string, raw: unknown): WireMessage {
         typeof c === "number" && Number.isFinite(c) && c >= 0
           ? Math.round(c * 100) / 100
           : undefined;
+    }
+    if (body.tokens === null) {
+      msg.tokens = null;
+    } else if (body.tokens !== undefined) {
+      const t = typeof body.tokens === "string" ? Number(body.tokens) : body.tokens;
+      msg.tokens =
+        typeof t === "number" && Number.isFinite(t) && t >= 0 ? Math.round(t) : undefined;
     }
   }
 

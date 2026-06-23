@@ -13,11 +13,11 @@ int main(void) {
     uint8_t buf[SONAR_MAX_FRAME];
     size_t n;
 
-    n = sonar_build_stats(0, 42, 28, 18, 483, "Opus 4.8", buf, sizeof(buf));
+    n = sonar_build_stats(0, 42, 28, 18, 483, "Opus 4.8", 73, buf, sizeof(buf));
     emit("stats_full", buf, n);
 
-    /* Null-safe: rate limits + cost absent (-1), model absent. */
-    n = sonar_build_stats(1, 55, -1, -1, -1, NULL, buf, sizeof(buf));
+    /* Null-safe: rate limits + cost + tokens absent (-1), model absent. */
+    n = sonar_build_stats(1, 55, -1, -1, -1, NULL, -1, buf, sizeof(buf));
     emit("stats_sparse", buf, n);
 
     n = sonar_build_event(0, SONAR_STATE_WAITING_APPROVAL, "Bash", "myrepo", buf, sizeof(buf));

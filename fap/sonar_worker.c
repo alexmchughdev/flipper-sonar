@@ -82,6 +82,10 @@ static void apply_frame(
             m->cost_valid = true;
         }
         if(s.flags & SONAR_F_MODEL) strlcpy(m->model, s.model, sizeof(m->model));
+        if(s.flags & SONAR_F_TOKENS) {
+            m->tokens = (uint32_t)s.tokens_h * 100u;
+            m->tokens_valid = true;
+        }
         break;
     }
     case SONAR_T_EVENT: {
@@ -96,6 +100,8 @@ static void apply_frame(
             *notify_old = m->state;
             *notify_new = e.state;
             fire = true;
+            /* Start the run timer when work begins. */
+            if(e.state == SONAR_STATE_WORKING) m->work_start_tick = furi_get_tick();
         }
         m->state = e.state;
         strlcpy(m->tool, e.tool, sizeof(m->tool));

@@ -16,6 +16,7 @@ emit(
     sevenDayPct: 18,
     costUsd: 4.83,
     model: "Opus 4.8",
+    tokens: 7300,
   }),
 );
 emit(

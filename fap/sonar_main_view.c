@@ -2,7 +2,7 @@
 #include <gui/elements.h>
 #include <math.h>
 
-#define ANIM_PERIOD_MS 150
+#define ANIM_PERIOD_MS 120
 
 typedef struct {
     Sonar* app;
@@ -11,51 +11,89 @@ typedef struct {
     int preview; /* -1 = live state; 0..4 = forced state for sprite preview (OK key) */
 } MainViewModel;
 
-/*
- * The Claude "spark" — a radial sunburst — rendered 1-bit and animated by state.
- * Drawn procedurally (12 rays, alternating long/short) so it rotates/breathes
- * crisply at any size. There is no official Claude Code sprite bitmap to copy;
- * to trace an exact pixel reference, drop a PNG and we convert it to an XBM.
- */
-static void draw_spark(Canvas* canvas, int cx, int cy, float angle, int rlong, int rshort) {
+/* Claude's working words. Rotates while working, like the CLI. ASCII only so the
+ * default font renders them. */
+static const char* const PHRASES[] = {
+    "Spelunking",   "Sauteing",   "Channelling", "Herding",      "Vibing",
+    "Pondering",    "Noodling",   "Conjuring",   "Percolating",  "Marinating",
+    "Ruminating",   "Tinkering",  "Brewing",     "Finagling",    "Cogitating",
+    "Wrangling",    "Simmering",  "Mulling",     "Computing",    "Incubating",
+    "Synthesizing", "Galloping",  "Whirring",    "Schlepping",
+};
+#define PHRASE_COUNT (sizeof(PHRASES) / sizeof(PHRASES[0]))
+
+/* ---- the Claude "spark": a small radial sunburst, used as the working spinner ---- */
+static void draw_spark(Canvas* c, int cx, int cy, float angle, int rlong, int rshort) {
     const int rays = 12;
     for(int i = 0; i < rays; i++) {
         float a = angle + (float)i * (2.0f * (float)M_PI / (float)rays);
         int len = (i % 2 == 0) ? rlong : rshort;
-        int x2 = cx + (int)lroundf(cosf(a) * (float)len);
-        int y2 = cy + (int)lroundf(sinf(a) * (float)len);
-        canvas_draw_line(canvas, cx, cy, x2, y2);
+        canvas_draw_line(c, cx, cy, cx + (int)lroundf(cosf(a) * len), cy + (int)lroundf(sinf(a) * len));
     }
-    canvas_draw_disc(canvas, cx, cy, 1); /* solid core */
+    canvas_draw_disc(c, cx, cy, 1);
 }
 
-/* cx,cy = spark centre. Each state gets a distinct animation. */
-static void draw_sprite(Canvas* canvas, int cx, int cy, uint8_t state, uint8_t frame) {
+/* ---- the pixel alien (Tamagotchi-style), pose driven by state ---- */
+static void draw_alien(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame) {
+    int bob = ((frame / 6) % 2) ? 1 : 0;
+    cy += bob;
+    if(state == SONAR_STATE_WAITING_APPROVAL) cx += (frame % 2) ? 1 : -1; /* shake */
+
+    /* antennae (wiggle) */
+    int wig = (frame % 2) ? 1 : 0;
+    canvas_draw_line(c, cx - 6, cy - 10, cx - 9 - wig, cy - 16);
+    canvas_draw_disc(c, cx - 9 - wig, cy - 17, 1);
+    canvas_draw_line(c, cx + 6, cy - 10, cx + 9 + wig, cy - 16);
+    canvas_draw_disc(c, cx + 9 + wig, cy - 17, 1);
+
+    /* head + legs */
+    canvas_draw_rframe(c, cx - 12, cy - 10, 24, 20, 6);
+    canvas_draw_line(c, cx - 5, cy + 10, cx - 5, cy + 13);
+    canvas_draw_line(c, cx + 5, cy + 10, cx + 5, cy + 13);
+    canvas_draw_line(c, cx - 7, cy + 13, cx - 3, cy + 13);
+    canvas_draw_line(c, cx + 3, cy + 13, cx + 7, cy + 13);
+
+    const int ex = 6, ey = cy - 2;
     switch(state) {
-    case SONAR_STATE_WORKING:
-        /* spinning spark — the "thinking" motion */
-        draw_spark(canvas, cx, cy, (float)frame * 0.45f, 7, 4);
+    case SONAR_STATE_DONE: /* happy ^ ^ + smile */
+        canvas_draw_line(c, cx - ex - 2, ey, cx - ex, ey - 2);
+        canvas_draw_line(c, cx - ex, ey - 2, cx - ex + 2, ey);
+        canvas_draw_line(c, cx + ex - 2, ey, cx + ex, ey - 2);
+        canvas_draw_line(c, cx + ex, ey - 2, cx + ex + 2, ey);
+        canvas_draw_line(c, cx - 4, cy + 5, cx, cy + 7);
+        canvas_draw_line(c, cx, cy + 7, cx + 4, cy + 5);
         break;
-    case SONAR_STATE_WAITING_APPROVAL:
-        draw_spark(canvas, cx, cy, 0.26f, 7, 4);
-        if(frame % 2) { /* blinking alert */
-            canvas_set_font(canvas, FontPrimary);
-            canvas_draw_str(canvas, cx + 11, cy + 4, "!");
-            canvas_set_font(canvas, FontSecondary);
+    case SONAR_STATE_WAITING_APPROVAL: /* wide eyes + open mouth + ! */
+        canvas_draw_disc(c, cx - ex, ey, 3);
+        canvas_draw_disc(c, cx + ex, ey, 3);
+        canvas_draw_circle(c, cx, cy + 6, 2);
+        if(frame % 2) {
+            canvas_draw_line(c, cx + 13, cy - 12, cx + 13, cy - 8);
+            canvas_draw_dot(c, cx + 13, cy - 6);
         }
         break;
-    case SONAR_STATE_WAITING_INPUT:
-        draw_spark(canvas, cx, cy, 0.26f, 7, 4);
-        canvas_draw_str(canvas, cx + 10, cy + 4, "?");
+    case SONAR_STATE_WAITING_INPUT: /* glance to side + ? */
+        canvas_draw_disc(c, cx - ex + 1, ey, 2);
+        canvas_draw_disc(c, cx + ex + 1, ey, 2);
+        canvas_draw_line(c, cx - 3, cy + 6, cx + 3, cy + 6);
+        canvas_draw_str(c, cx + 12, cy - 6, "?");
         break;
-    case SONAR_STATE_DONE:
-        draw_spark(canvas, cx, cy, 0.26f, 7, 4);
-        canvas_draw_line(canvas, cx + 9, cy + 1, cx + 12, cy + 4); /* check */
-        canvas_draw_line(canvas, cx + 12, cy + 4, cx + 16, cy - 3);
+    case SONAR_STATE_WORKING: /* focused */
+        canvas_draw_disc(c, cx - ex, ey, 2);
+        canvas_draw_disc(c, cx + ex, ey, 2);
+        canvas_draw_line(c, cx - 2, cy + 6, cx + 2, cy + 6);
         break;
-    default: { /* idle: slow breathe + slow drift */
-        int b = 6 + (int)((frame / 4) % 3); /* 6..8 */
-        draw_spark(canvas, cx, cy, (float)frame * 0.05f, b, b - 3);
+    default: { /* idle: blink + occasional z */
+        bool blink = ((frame / 12) % 6) == 0;
+        if(blink) {
+            canvas_draw_line(c, cx - ex - 2, ey, cx - ex + 2, ey);
+            canvas_draw_line(c, cx + ex - 2, ey, cx + ex + 2, ey);
+        } else {
+            canvas_draw_disc(c, cx - ex, ey, 2);
+            canvas_draw_disc(c, cx + ex, ey, 2);
+        }
+        canvas_draw_line(c, cx - 2, cy + 6, cx + 2, cy + 6);
+        if(((frame / 16) % 4) == 0) canvas_draw_str(c, cx + 11, cy - 10, "z");
         break;
     }
     }
@@ -76,84 +114,111 @@ static const char* state_label(uint8_t state) {
     }
 }
 
-/* One labelled bar. valid=false draws an empty frame + "--" (never zero-flap). */
-static void draw_bar(
-    Canvas* canvas,
-    int y,
-    int h,
-    const char* label,
-    bool valid,
-    uint8_t pct,
-    const char* value) {
-    const int bx = 34, bw = 60;
-    int texty = y + h - 1; /* baseline near the bar's vertical centre */
-    canvas_draw_str(canvas, 0, texty, label);
-    canvas_draw_frame(canvas, bx, y, bw, h);
+/* Compact bar on the right column. */
+static void draw_minibar(Canvas* c, int y, const char* label, bool valid, uint8_t pct) {
+    const int lx = 52, bx = 74, bw = 32, bh = 6;
+    canvas_draw_str(c, lx, y + 6, label);
+    canvas_draw_frame(c, bx, y, bw, bh);
     if(valid) {
-        int fill = (bw - 2) * pct / 100;
-        if(fill > 0) canvas_draw_box(canvas, bx + 1, y + 1, fill, h - 2);
+        int f = (bw - 2) * pct / 100;
+        if(f > 0) canvas_draw_box(c, bx + 1, y + 1, f, bh - 2);
     }
-    canvas_draw_str(canvas, bx + bw + 3, texty, valid ? value : "--");
+    char v[12];
+    if(valid)
+        snprintf(v, sizeof(v), "%u", pct);
+    else
+        snprintf(v, sizeof(v), "--");
+    canvas_draw_str(c, bx + bw + 3, y + 6, v);
 }
 
-static void draw_link_glyph(Canvas* canvas, SonarLink link, uint8_t frame) {
-    const int gx = 120, gy = 7;
+static void draw_link_glyph(Canvas* c, SonarLink link, uint8_t frame) {
+    const int gx = 122, gy = 6;
     switch(link) {
     case SonarLinkOnline:
-        canvas_draw_disc(canvas, gx, gy - 2, 2);
+        canvas_draw_disc(c, gx, gy - 2, 2);
         break;
     case SonarLinkConnecting:
-        /* animated dots */
-        for(int i = 0; i < (frame % 3) + 1; i++) canvas_draw_dot(canvas, gx - 4 + i * 3, gy - 2);
+        for(int i = 0; i < (frame % 3) + 1; i++) canvas_draw_dot(c, gx - 4 + i * 3, gy - 2);
         break;
     case SonarLinkStale:
-        canvas_draw_str(canvas, gx - 4, gy, "x");
+        canvas_draw_str(c, gx - 4, gy, "x");
         break;
     }
+}
+
+static void fmt_tokens(char* out, size_t n, uint32_t t) {
+    if(t > 9999999u) t = 9999999u; /* bound output width */
+    if(t < 1000)
+        snprintf(out, n, "%u", (unsigned)t);
+    else
+        snprintf(out, n, "%u.%uk", (unsigned)(t / 1000), (unsigned)((t % 1000) / 100));
 }
 
 static void main_draw(Canvas* canvas, void* model_v) {
     MainViewModel* vm = model_v;
     Sonar* app = vm->app;
 
-    /* Snapshot the shared model under the lock; draw from the copy so the
-     * critical section stays tiny and the worker is never blocked on rendering. */
     SonarModel m;
     furi_mutex_acquire(app->mutex, FuriWaitForever);
     m = app->model;
     furi_mutex_release(app->mutex);
 
+    uint8_t disp_state = vm->preview >= 0 ? (uint8_t)vm->preview : m.state;
+
     canvas_set_font(canvas, FontSecondary);
 
-    /* Header: model name + link glyph */
-    const char* model_name = m.model[0] ? m.model : "(no model)";
-    canvas_draw_str(canvas, 0, 7, model_name);
+    /* Header: model + link glyph */
+    canvas_draw_str(canvas, 0, 7, m.model[0] ? m.model : "(no model)");
     draw_link_glyph(canvas, m.link, vm->frame);
     canvas_draw_line(canvas, 0, 9, 127, 9);
 
-    /* Three usage bars: session (context fill), 5h limit, weekly (7d) limit.
-     * No cost — usage is what matters regardless of plan. */
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%u%%", m.ctx_pct);
-    draw_bar(canvas, 12, 9, "SESS", m.ctx_valid, m.ctx_pct, buf);
-    snprintf(buf, sizeof(buf), "%u%%", m.five_pct);
-    draw_bar(canvas, 24, 9, "5H", m.five_valid, m.five_pct, buf);
-    snprintf(buf, sizeof(buf), "%u%%", m.seven_pct);
-    draw_bar(canvas, 36, 9, "WEEK", m.seven_valid, m.seven_pct, buf);
+    /* Left: the alien character */
+    draw_alien(canvas, 24, 29, disp_state, vm->frame);
 
-    /* State + sprite. preview (OK key) forces a state so every sprite animation
-     * can be checked on-device before the telemetry pipeline is live. */
-    uint8_t disp_state = vm->preview >= 0 ? (uint8_t)vm->preview : m.state;
-    canvas_draw_line(canvas, 0, 48, 127, 48);
-    canvas_set_font(canvas, FontPrimary);
-    canvas_draw_str(canvas, 0, 60, state_label(disp_state));
-    canvas_set_font(canvas, FontSecondary);
-    if(vm->preview >= 0) {
-        canvas_draw_str(canvas, 60, 60, "demo");
-    } else if(m.tool[0] && m.state == SONAR_STATE_WORKING) {
-        canvas_draw_str(canvas, 44, 60, m.tool);
+    /* Right: compact usage bars */
+    draw_minibar(canvas, 13, "SESS", m.ctx_valid, m.ctx_pct);
+    draw_minibar(canvas, 25, "5H", m.five_valid, m.five_pct);
+    draw_minibar(canvas, 37, "WEEK", m.seven_valid, m.seven_pct);
+
+    /* Bottom strip */
+    canvas_draw_line(canvas, 0, 50, 127, 50);
+    if(disp_state == SONAR_STATE_WORKING) {
+        draw_spark(canvas, 6, 57, (float)vm->frame * 0.45f, 5, 3);
+
+        /* run timer from when work began */
+        uint32_t secs = 0;
+        if(m.work_start_tick) {
+            uint32_t now = furi_get_tick();
+            uint32_t freq = furi_kernel_get_tick_frequency();
+            if(!freq) freq = 1000;
+            if(now >= m.work_start_tick) secs = (now - m.work_start_tick) / freq;
+        }
+        const char* ph = PHRASES[(secs / 3) % PHRASE_COUNT];
+
+        char line[72];
+        if(m.tokens_valid) {
+            char tok[24];
+            fmt_tokens(tok, sizeof(tok), m.tokens);
+            snprintf(
+                line, sizeof(line), "%s %lu:%02lu %s", ph, (unsigned long)(secs / 60),
+                (unsigned long)(secs % 60), tok);
+        } else {
+            snprintf(
+                line, sizeof(line), "%s %lu:%02lu", ph, (unsigned long)(secs / 60),
+                (unsigned long)(secs % 60));
+        }
+        canvas_draw_str(canvas, 14, 61, line);
+    } else {
+        canvas_set_font(canvas, FontPrimary);
+        canvas_draw_str(canvas, 2, 62, state_label(disp_state));
+        canvas_set_font(canvas, FontSecondary);
+        if(vm->preview >= 0) canvas_draw_str(canvas, 70, 61, "demo");
+        else if(disp_state == SONAR_STATE_DONE && m.tokens_valid) {
+            char tok[24];
+            fmt_tokens(tok, sizeof(tok), m.tokens);
+            canvas_draw_str(canvas, 70, 61, tok);
+        }
     }
-    draw_sprite(canvas, 110, 56, disp_state, vm->frame);
 }
 
 static bool main_input(InputEvent* event, void* ctx) {
@@ -161,8 +226,6 @@ static bool main_input(InputEvent* event, void* ctx) {
     if(event->type != InputTypeShort) return false;
 
     if(event->key == InputKeyLeft || event->key == InputKeyRight) {
-        /* Cycle the tracked session among those actually seen, so concurrent
-         * sessions are selectable and the display never flaps on its own. */
         furi_mutex_acquire(app->mutex, FuriWaitForever);
         uint32_t seen = app->model.seen_sessions;
         uint8_t cur = app->config.tracked_session;
@@ -182,7 +245,6 @@ static bool main_input(InputEvent* event, void* ctx) {
     }
 
     if(event->key == InputKeyOk) {
-        /* Cycle the sprite preview: idle->working->approval->input->done->live. */
         with_view_model(
             app->main_view,
             MainViewModel * vm,
@@ -190,8 +252,6 @@ static bool main_input(InputEvent* event, void* ctx) {
             true);
         return true;
     }
-
-    /* Back falls through to the dispatcher (navigates to the menu). */
     return false;
 }
 
@@ -200,8 +260,6 @@ static void main_timer_cb(void* ctx) {
     with_view_model(view, MainViewModel * vm, { vm->frame++; }, true);
 }
 
-/* enter/exit receive the view's context (the Sonar app); reach the View through
- * app->main_view. */
 static void main_enter(void* ctx) {
     Sonar* app = ctx;
     View* view = app->main_view;
@@ -209,9 +267,7 @@ static void main_enter(void* ctx) {
         view,
         MainViewModel * vm,
         {
-            if(!vm->timer) {
-                vm->timer = furi_timer_alloc(main_timer_cb, FuriTimerTypePeriodic, view);
-            }
+            if(!vm->timer) vm->timer = furi_timer_alloc(main_timer_cb, FuriTimerTypePeriodic, view);
             furi_timer_start(vm->timer, furi_ms_to_ticks(ANIM_PERIOD_MS));
         },
         false);
@@ -242,7 +298,6 @@ View* sonar_main_view_alloc(Sonar* app) {
     view_set_input_callback(view, main_input);
     view_set_enter_callback(view, main_enter);
     view_set_exit_callback(view, main_exit);
-    view_set_previous_callback(view, NULL); /* set by app to SonarViewMenu */
     return view;
 }
 
