@@ -38,24 +38,24 @@ static void draw_spark(Canvas* c, int cx, int cy, float angle, int rlong, int rs
  * reacts to state. cx,cy = centre. ---- */
 static void draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame) {
     const int bs = 4; /* block size */
-    /* 9-wide x 8-tall block grid; '#' = body. Ears on top, legs on bottom. */
-    static const char* const G[8] = {
-        ".##...##.",
-        ".##...##.",
+    /* Clawd: 9-wide x 7-tall block grid; '#' = body. Ears on top (close, 1-gap),
+     * wide mid with side tabs, four legs. */
+    static const char* const G[7] = {
+        "..##.##..",
+        "..##.##..",
         "#########",
         "#########",
         "#########",
         "#########",
-        "#########",
-        ".##...##.",
+        ".#.#.#.#.",
     };
     int bob = ((frame / 6) % 2) ? 1 : 0;
     int sx = (state == SONAR_STATE_WAITING_APPROVAL) ? ((frame % 2) ? 1 : -1) : 0; /* shake */
     int ox = cx - (9 * bs) / 2 + sx;
-    int oy = cy - (8 * bs) / 2 + bob;
+    int oy = cy - (7 * bs) / 2 + bob;
 
     /* body */
-    for(int r = 0; r < 8; r++)
+    for(int r = 0; r < 7; r++)
         for(int col = 0; col < 9; col++)
             if(G[r][col] == '#') canvas_draw_box(c, ox + col * bs, oy + r * bs, bs, bs);
     /* side tabs (little arms), mid height */
@@ -65,9 +65,9 @@ static void draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t fram
     /* eyes: punched out of the body (white) — vertical notches like the ref */
     canvas_set_color(c, ColorWhite);
     int ey = oy + 2 * bs + 1;
-    int eh = bs + 2;
-    int elx = ox + 2 * bs + 1;
-    int erx = ox + 6 * bs + 1;
+    int eh = bs + 3;
+    int elx = ox + 3 * bs + 1;
+    int erx = ox + 5 * bs + 1;
     switch(state) {
     case SONAR_STATE_IDLE:
         if(((frame / 12) % 6) == 0) { /* blink */
@@ -89,7 +89,7 @@ static void draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t fram
     case SONAR_STATE_DONE: /* small happy eyes + smile notch */
         canvas_draw_box(c, elx, ey, bs - 2, bs - 1);
         canvas_draw_box(c, erx, ey, bs - 2, bs - 1);
-        canvas_draw_box(c, ox + 4 * bs, oy + 6 * bs, bs, 2);
+        canvas_draw_box(c, ox + 4 * bs, oy + 5 * bs, bs, 2);
         break;
     default: /* working */
         canvas_draw_box(c, elx, ey, bs - 2, eh);
@@ -124,7 +124,7 @@ static const char* state_label(uint8_t state) {
 
 /* Compact bar on the right column. */
 static void draw_minibar(Canvas* c, int y, const char* label, bool valid, uint8_t pct) {
-    const int lx = 52, bx = 74, bw = 32, bh = 6;
+    const int lx = 52, bx = 80, bw = 27, bh = 6;
     canvas_draw_str(c, lx, y + 6, label);
     canvas_draw_frame(c, bx, y, bw, bh);
     if(valid) {
