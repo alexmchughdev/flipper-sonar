@@ -49,6 +49,43 @@ of context each; this is a log, not a discussion.
   what keys/hooks the installer added, so `--uninstall` is precise and never
   removes the user's unrelated hooks or settings.
 
+## Product / FAP UI (post-hardware iteration)
+- **Renamed to "Flipper Claudeogotchi"** (appid `claudeogotchi`); the on-screen
+  character is **Clawd**, Claude Code's 8-bit mascot, traced 1:1 from reference
+  art (flat-top body, square side tabs sized so head-above = 2× tab height and
+  gap-below = tab height, two thin wide-set eye slits, four symmetric legs with
+  the outer pair flush to the body).
+- **Bars are session/5h/weekly usage, no cost.** Usage is the meaningful signal
+  on any plan (cost is just an estimate on subscriptions). Cost plumbing was
+  removed from the UI.
+- **Spinner verbs**: the full ~106 Claude Code spinner verbs, chosen at random
+  per work-session and re-rolled ~every 30s. **Run timer** is on-device from a
+  `work_start_tick`. **Output tokens** added end-to-end (proto + relay +
+  firmware + statusline best-effort) and shown like the CLI (`7.3k`).
+- **Bottom bar only shows when something is happening** (working/input/approval/
+  done); idle hides it. Attention shows as a blinking `!` (input) / `?`
+  (approval) beside Clawd. **Done** plays a brief `> <` happy face (~3s, tracked
+  via `state_tick`) then reverts to the normal face.
+- **Sprite tuning is done off-device** with Pillow preview scripts
+  (`fap/tools_clawd_preview.py`, `fap/tools_screen_preview.py`) rendered and
+  compared to the reference before flashing — far cheaper than guess-and-flash.
+
+## No-board USB mode
+- **Link setting: Board (GPIO/ESP32) or USB.** USB mode lets the Flipper run
+  with no WiFi board: a host-side `sonar-usb-bridge.mjs` subscribes to the relay
+  and writes UART frames to the Flipper's USB serial. Works for remote Claude
+  Code too, since the bridge machine does the networking.
+- **USB mode uses the dual CDC config**, not single. The Flipper CLI/RPC stays
+  alive on channel 0 (so ufbt/qFlipper keep working and the app can be reflashed)
+  while Clawd reads telemetry on channel 1. Single-CDC takeover wedged the CLI
+  until a replug — dual CDC fixes that. The bridge targets the higher-numbered
+  serial node (channel 1).
+
+## Build/flash
+- **Device runs Momentum firmware `mntm-011` (API 86).** The FAP is built with
+  the Momentum SDK pinned to that release (`ufbt update --url …mntm-011…`) so
+  there's no "app too new" prompt. See [[../README]] / Makefile.
+
 ## Session selection
 - When multiple `session_id`s post to one sonar ID, the relay forwards all but
   tags each frame with a 1-byte session slot. The FAP tracks a selectable

@@ -123,8 +123,19 @@ function detectPort() {
         : f.startsWith("ttyACM") || f.startsWith("ttyUSB"),
     )
     .map((f) => `${dir}/${f}`);
-  // Prefer a Flipper-looking node.
-  candidates.sort((a, b) => (b.includes("flip") ? 1 : 0) - (a.includes("flip") ? 1 : 0));
+  // In Link=USB mode the FAP exposes a dual CDC: channel 0 stays the Flipper
+  // CLI, channel 1 is Sonar's data. The data node is the higher-numbered one,
+  // so prefer Flipper nodes and, among them, the highest trailing number.
+  const trailing = (s) => {
+    const m = s.match(/(\d+)\D*$/);
+    return m ? parseInt(m[1], 10) : 0;
+  };
+  candidates.sort((a, b) => {
+    const fa = a.includes("flip") ? 1 : 0,
+      fb = b.includes("flip") ? 1 : 0;
+    if (fa !== fb) return fb - fa;
+    return trailing(b) - trailing(a);
+  });
   return candidates[0] || null;
 }
 

@@ -4,9 +4,9 @@
  * SSH box, or inside a dev container) and edits THAT environment's Claude Code
  * settings — never a remote laptop's.
  *
- *   npx github:<owner>/flipper-sonar --pair AB12CD
- *   npx github:<owner>/flipper-sonar --pair AB12CD --relay https://my.relay
- *   npx github:<owner>/flipper-sonar --uninstall
+ *   npx github:alexmchughdev/flipper-sonar --pair AB12CD
+ *   npx github:alexmchughdev/flipper-sonar --pair AB12CD --relay https://my.relay
+ *   npx github:alexmchughdev/flipper-sonar --uninstall
  *
  * Flags:
  *   --pair <ID>     sonar pairing code (6 Crockford base32 chars)
@@ -107,9 +107,9 @@ function help() {
   --help
 
 Examples:
-  npx github:<owner>/flipper-sonar --pair AB12CD
-  npx github:<owner>/flipper-sonar --pair AB12CD --relay https://my.relay
-  npx github:<owner>/flipper-sonar --uninstall
+  npx github:alexmchughdev/flipper-sonar --pair AB12CD
+  npx github:alexmchughdev/flipper-sonar --pair AB12CD --relay https://my.relay
+  npx github:alexmchughdev/flipper-sonar --uninstall
 `,
   );
 }

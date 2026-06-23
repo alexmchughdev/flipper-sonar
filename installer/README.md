@@ -5,9 +5,9 @@ on — your laptop, an SSH box, or inside a dev container — and it edits *that
 environment's Claude Code settings. Zero runtime dependencies (Node stdlib only).
 
 ```bash
-npx github:<owner>/flipper-sonar --pair AB12CD
-npx github:<owner>/flipper-sonar --pair AB12CD --relay https://my.relay
-npx github:<owner>/flipper-sonar --uninstall
+npx github:alexmchughdev/flipper-sonar --pair AB12CD
+npx github:alexmchughdev/flipper-sonar --pair AB12CD --relay https://my.relay
+npx github:alexmchughdev/flipper-sonar --uninstall
 ```
 
 ## What it writes
@@ -49,7 +49,7 @@ Bake it into the image or `postCreateCommand`:
 
 ```jsonc
 // devcontainer.json
-"postCreateCommand": "npx -y github:<owner>/flipper-sonar --pair AB12CD"
+"postCreateCommand": "npx -y github:alexmchughdev/flipper-sonar --pair AB12CD"
 ```
 
 ## Tests

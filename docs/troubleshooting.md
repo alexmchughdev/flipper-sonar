@@ -14,6 +14,20 @@ The FAP header shows link state: a filled dot (online), animated dots
   Heartbeats every ~10s; three missed (~30s) → stale. It self-heals on
   reconnect.
 
+## No-board USB mode
+
+- Set the FAP to **Settings → Link → USB** (Board is the default). USB mode uses
+  a dual CDC, so the Flipper CLI/qFlipper still work on channel 0 while Clawd
+  reads telemetry on channel 1.
+- Run the bridge on the machine the Flipper is plugged into: `make bridge
+  ID=<CODE>` (or `node installer/runtime/sonar-usb-bridge.mjs --sonar <CODE>
+  --relay ws://host:8787`).
+- If the bridge picks the wrong serial port (writes to the CLI instead of the
+  data channel), pass it explicitly: `--port /dev/cu.usbmodemXXXX`. The data
+  channel is the higher-numbered node.
+- After using USB mode, exiting the app restores the normal single-CDC CLI; no
+  replug needed.
+
 ## Captive portals (hotels, cafés, conferences)
 
 A headless ESP32 **cannot** complete a web sign-in page, so these networks will
