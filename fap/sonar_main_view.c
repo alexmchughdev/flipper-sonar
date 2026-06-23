@@ -33,70 +33,78 @@ static void draw_spark(Canvas* c, int cx, int cy, float angle, int rlong, int rs
     canvas_draw_disc(c, cx, cy, 1);
 }
 
-/* ---- the pixel alien (Tamagotchi-style), pose driven by state ---- */
-static void draw_alien(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame) {
+/* ---- the Claude Code creature: chunky pixel body, ear bumps, eye notches,
+ * side tabs and four stubby legs. Drawn 1-bit (body filled, eyes punched). Pose
+ * reacts to state. cx,cy = centre. ---- */
+static void draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame) {
+    const int bs = 4; /* block size */
+    /* 9-wide x 8-tall block grid; '#' = body. Ears on top, legs on bottom. */
+    static const char* const G[8] = {
+        ".##...##.",
+        ".##...##.",
+        "#########",
+        "#########",
+        "#########",
+        "#########",
+        "#########",
+        ".##...##.",
+    };
     int bob = ((frame / 6) % 2) ? 1 : 0;
-    cy += bob;
-    if(state == SONAR_STATE_WAITING_APPROVAL) cx += (frame % 2) ? 1 : -1; /* shake */
+    int sx = (state == SONAR_STATE_WAITING_APPROVAL) ? ((frame % 2) ? 1 : -1) : 0; /* shake */
+    int ox = cx - (9 * bs) / 2 + sx;
+    int oy = cy - (8 * bs) / 2 + bob;
 
-    /* antennae (wiggle) */
-    int wig = (frame % 2) ? 1 : 0;
-    canvas_draw_line(c, cx - 6, cy - 10, cx - 9 - wig, cy - 16);
-    canvas_draw_disc(c, cx - 9 - wig, cy - 17, 1);
-    canvas_draw_line(c, cx + 6, cy - 10, cx + 9 + wig, cy - 16);
-    canvas_draw_disc(c, cx + 9 + wig, cy - 17, 1);
+    /* body */
+    for(int r = 0; r < 8; r++)
+        for(int col = 0; col < 9; col++)
+            if(G[r][col] == '#') canvas_draw_box(c, ox + col * bs, oy + r * bs, bs, bs);
+    /* side tabs (little arms), mid height */
+    canvas_draw_box(c, ox - bs, oy + 3 * bs, bs, bs * 2);
+    canvas_draw_box(c, ox + 9 * bs, oy + 3 * bs, bs, bs * 2);
 
-    /* head + legs */
-    canvas_draw_rframe(c, cx - 12, cy - 10, 24, 20, 6);
-    canvas_draw_line(c, cx - 5, cy + 10, cx - 5, cy + 13);
-    canvas_draw_line(c, cx + 5, cy + 10, cx + 5, cy + 13);
-    canvas_draw_line(c, cx - 7, cy + 13, cx - 3, cy + 13);
-    canvas_draw_line(c, cx + 3, cy + 13, cx + 7, cy + 13);
-
-    const int ex = 6, ey = cy - 2;
+    /* eyes: punched out of the body (white) — vertical notches like the ref */
+    canvas_set_color(c, ColorWhite);
+    int ey = oy + 2 * bs + 1;
+    int eh = bs + 2;
+    int elx = ox + 2 * bs + 1;
+    int erx = ox + 6 * bs + 1;
     switch(state) {
-    case SONAR_STATE_DONE: /* happy ^ ^ + smile */
-        canvas_draw_line(c, cx - ex - 2, ey, cx - ex, ey - 2);
-        canvas_draw_line(c, cx - ex, ey - 2, cx - ex + 2, ey);
-        canvas_draw_line(c, cx + ex - 2, ey, cx + ex, ey - 2);
-        canvas_draw_line(c, cx + ex, ey - 2, cx + ex + 2, ey);
-        canvas_draw_line(c, cx - 4, cy + 5, cx, cy + 7);
-        canvas_draw_line(c, cx, cy + 7, cx + 4, cy + 5);
-        break;
-    case SONAR_STATE_WAITING_APPROVAL: /* wide eyes + open mouth + ! */
-        canvas_draw_disc(c, cx - ex, ey, 3);
-        canvas_draw_disc(c, cx + ex, ey, 3);
-        canvas_draw_circle(c, cx, cy + 6, 2);
-        if(frame % 2) {
-            canvas_draw_line(c, cx + 13, cy - 12, cx + 13, cy - 8);
-            canvas_draw_dot(c, cx + 13, cy - 6);
-        }
-        break;
-    case SONAR_STATE_WAITING_INPUT: /* glance to side + ? */
-        canvas_draw_disc(c, cx - ex + 1, ey, 2);
-        canvas_draw_disc(c, cx + ex + 1, ey, 2);
-        canvas_draw_line(c, cx - 3, cy + 6, cx + 3, cy + 6);
-        canvas_draw_str(c, cx + 12, cy - 6, "?");
-        break;
-    case SONAR_STATE_WORKING: /* focused */
-        canvas_draw_disc(c, cx - ex, ey, 2);
-        canvas_draw_disc(c, cx + ex, ey, 2);
-        canvas_draw_line(c, cx - 2, cy + 6, cx + 2, cy + 6);
-        break;
-    default: { /* idle: blink + occasional z */
-        bool blink = ((frame / 12) % 6) == 0;
-        if(blink) {
-            canvas_draw_line(c, cx - ex - 2, ey, cx - ex + 2, ey);
-            canvas_draw_line(c, cx + ex - 2, ey, cx + ex + 2, ey);
+    case SONAR_STATE_IDLE:
+        if(((frame / 12) % 6) == 0) { /* blink */
+            canvas_draw_box(c, elx, ey + eh / 2, bs - 1, 1);
+            canvas_draw_box(c, erx, ey + eh / 2, bs - 1, 1);
         } else {
-            canvas_draw_disc(c, cx - ex, ey, 2);
-            canvas_draw_disc(c, cx + ex, ey, 2);
+            canvas_draw_box(c, elx, ey, bs - 2, eh);
+            canvas_draw_box(c, erx, ey, bs - 2, eh);
         }
-        canvas_draw_line(c, cx - 2, cy + 6, cx + 2, cy + 6);
-        if(((frame / 16) % 4) == 0) canvas_draw_str(c, cx + 11, cy - 10, "z");
+        break;
+    case SONAR_STATE_WAITING_APPROVAL: /* wide */
+        canvas_draw_box(c, elx - 1, ey - 1, bs, eh + 1);
+        canvas_draw_box(c, erx - 1, ey - 1, bs, eh + 1);
+        break;
+    case SONAR_STATE_WAITING_INPUT: /* glance right */
+        canvas_draw_box(c, elx + 1, ey, bs - 2, eh);
+        canvas_draw_box(c, erx + 1, ey, bs - 2, eh);
+        break;
+    case SONAR_STATE_DONE: /* small happy eyes + smile notch */
+        canvas_draw_box(c, elx, ey, bs - 2, bs - 1);
+        canvas_draw_box(c, erx, ey, bs - 2, bs - 1);
+        canvas_draw_box(c, ox + 4 * bs, oy + 6 * bs, bs, 2);
+        break;
+    default: /* working */
+        canvas_draw_box(c, elx, ey, bs - 2, eh);
+        canvas_draw_box(c, erx, ey, bs - 2, eh);
         break;
     }
-    }
+    canvas_set_color(c, ColorBlack);
+
+    /* state flourishes */
+    if(state == SONAR_STATE_WAITING_APPROVAL && (frame % 2))
+        canvas_draw_str(c, ox + 9 * bs + 1, oy + 4, "!");
+    else if(state == SONAR_STATE_WAITING_INPUT)
+        canvas_draw_str(c, ox + 9 * bs + 1, oy + 8, "?");
+    else if(state == SONAR_STATE_IDLE && ((frame / 16) % 4) == 0)
+        canvas_draw_str(c, ox + 9 * bs, oy - 1, "z");
 }
 
 static const char* state_label(uint8_t state) {
@@ -172,8 +180,8 @@ static void main_draw(Canvas* canvas, void* model_v) {
     draw_link_glyph(canvas, m.link, vm->frame);
     canvas_draw_line(canvas, 0, 9, 127, 9);
 
-    /* Left: the alien character */
-    draw_alien(canvas, 24, 29, disp_state, vm->frame);
+    /* Left: the Claude creature */
+    draw_creature(canvas, 24, 28, disp_state, vm->frame);
 
     /* Right: compact usage bars */
     draw_minibar(canvas, 13, "SESS", m.ctx_valid, m.ctx_pct);
