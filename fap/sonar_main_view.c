@@ -53,92 +53,66 @@ static void draw_spark(Canvas* c, int cx, int cy, float angle, int rlong, int rs
     canvas_draw_disc(c, cx, cy, 1);
 }
 
-/* ---- the Claude Code creature: chunky pixel body, ear bumps, eye notches,
- * side tabs and four stubby legs. Drawn 1-bit (body filled, eyes punched). Pose
- * reacts to state. cx,cy = centre. ---- */
-static void draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame) {
-    const int bs = 4; /* block size */
-    /* Clawd: solid chunky body (no ears). Slightly inset top corners, a wide mid
-     * with side tabs, and four legs. The two black rects are EYES, punched out. */
-    static const char* const G[6] = {
+/* ---- Clawd, the Claude Code creature. Flat-topped rectangular body, two tall
+ * eye-notches spaced wide, a side tab each side, two thin legs under the eyes.
+ * 1-bit (body filled, eyes punched white). Pose reacts to state. cx,cy = centre.
+ * Returns the body's right edge x so the caller can place a glyph beside it. ---- */
+static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame) {
+    const int bs = 5;
+    static const char* const G[5] = {
         ".#######.",
-        "#########",
-        "#########",
-        "#########",
-        "#########",
-        ".#.#.#.#.",
+        ".#######.",
+        ".#######.",
+        "#########", /* side tabs stick out here */
+        ".#######.",
     };
     int bob = ((frame / 6) % 2) ? 1 : 0;
     int sx = (state == SONAR_STATE_WAITING_APPROVAL) ? ((frame % 2) ? 1 : -1) : 0; /* shake */
     int ox = cx - (9 * bs) / 2 + sx;
-    int oy = cy - (6 * bs) / 2 + bob;
+    int oy = cy - (5 * bs) / 2 + bob;
 
-    /* body */
-    for(int r = 0; r < 6; r++)
+    for(int r = 0; r < 5; r++)
         for(int col = 0; col < 9; col++)
             if(G[r][col] == '#') canvas_draw_box(c, ox + col * bs, oy + r * bs, bs, bs);
-    /* side tabs (little arms), mid height */
-    canvas_draw_box(c, ox - bs, oy + 2 * bs, bs, bs * 2);
-    canvas_draw_box(c, ox + 9 * bs, oy + 2 * bs, bs, bs * 2);
 
-    /* eyes: punched out of the body (white) — tall vertical notches like the ref */
+    /* two thin legs under the eyes */
+    canvas_draw_box(c, ox + 2 * bs + 1, oy + 5 * bs, bs - 2, bs + 1);
+    canvas_draw_box(c, ox + 6 * bs + 1, oy + 5 * bs, bs - 2, bs + 1);
+
+    /* eyes, punched white */
     canvas_set_color(c, ColorWhite);
-    int ey = oy + bs + 1;
-    int eh = bs + 3;
-    int elx = ox + 3 * bs + 1;
-    int erx = ox + 5 * bs + 1;
+    int elx = ox + 2 * bs + 1, erx = ox + 6 * bs + 1;
+    int ey = oy + bs + 1, ew = 2, eh = bs + 2;
     switch(state) {
     case SONAR_STATE_IDLE:
         if(((frame / 12) % 6) == 0) { /* blink */
-            canvas_draw_box(c, elx, ey + eh / 2, bs - 1, 1);
-            canvas_draw_box(c, erx, ey + eh / 2, bs - 1, 1);
+            canvas_draw_box(c, elx, ey + eh / 2, ew + 1, 1);
+            canvas_draw_box(c, erx, ey + eh / 2, ew + 1, 1);
         } else {
-            canvas_draw_box(c, elx, ey, bs - 2, eh);
-            canvas_draw_box(c, erx, ey, bs - 2, eh);
+            canvas_draw_box(c, elx, ey, ew, eh);
+            canvas_draw_box(c, erx, ey, ew, eh);
         }
         break;
-    case SONAR_STATE_WAITING_APPROVAL: /* wide */
-        canvas_draw_box(c, elx - 1, ey - 1, bs, eh + 1);
-        canvas_draw_box(c, erx - 1, ey - 1, bs, eh + 1);
+    case SONAR_STATE_WAITING_APPROVAL: /* wide eyes */
+        canvas_draw_box(c, elx - 1, ey - 1, ew + 2, eh + 2);
+        canvas_draw_box(c, erx - 1, ey - 1, ew + 2, eh + 2);
         break;
-    case SONAR_STATE_WAITING_INPUT: /* glance right */
-        canvas_draw_box(c, elx + 1, ey, bs - 2, eh);
-        canvas_draw_box(c, erx + 1, ey, bs - 2, eh);
+    case SONAR_STATE_WAITING_INPUT: /* glance */
+        canvas_draw_box(c, elx + 1, ey, ew, eh);
+        canvas_draw_box(c, erx + 1, ey, ew, eh);
         break;
-    case SONAR_STATE_DONE: /* small happy eyes + smile notch */
-        canvas_draw_box(c, elx, ey, bs - 2, bs - 1);
-        canvas_draw_box(c, erx, ey, bs - 2, bs - 1);
-        canvas_draw_box(c, ox + 4 * bs, oy + 4 * bs, bs, 2);
+    case SONAR_STATE_DONE: /* small happy eyes + smile */
+        canvas_draw_box(c, elx, ey, ew, 2);
+        canvas_draw_box(c, erx, ey, ew, 2);
+        canvas_draw_box(c, ox + 4 * bs, oy + 3 * bs, bs, 2);
         break;
     default: /* working */
-        canvas_draw_box(c, elx, ey, bs - 2, eh);
-        canvas_draw_box(c, erx, ey, bs - 2, eh);
+        canvas_draw_box(c, elx, ey, ew, eh);
+        canvas_draw_box(c, erx, ey, ew, eh);
         break;
     }
     canvas_set_color(c, ColorBlack);
-
-    /* state flourishes */
-    if(state == SONAR_STATE_WAITING_APPROVAL && (frame % 2))
-        canvas_draw_str(c, ox + 9 * bs + 1, oy + 4, "!");
-    else if(state == SONAR_STATE_WAITING_INPUT)
-        canvas_draw_str(c, ox + 9 * bs + 1, oy + 8, "?");
-    else if(state == SONAR_STATE_IDLE && ((frame / 16) % 4) == 0)
-        canvas_draw_str(c, ox + 9 * bs, oy - 1, "z");
-}
-
-static const char* state_label(uint8_t state) {
-    switch(state) {
-    case SONAR_STATE_WORKING:
-        return "working";
-    case SONAR_STATE_WAITING_APPROVAL:
-        return "approve?";
-    case SONAR_STATE_WAITING_INPUT:
-        return "input?";
-    case SONAR_STATE_DONE:
-        return "done";
-    default:
-        return "idle";
-    }
+    return ox + 8 * bs; /* right edge of the body (col7) */
 }
 
 /* Compact bar on the right column. */
@@ -200,19 +174,31 @@ static void main_draw(Canvas* canvas, void* model_v) {
     canvas_draw_line(canvas, 0, 9, 127, 9);
 
     /* Left: the Claude creature */
-    draw_creature(canvas, 24, 28, disp_state, vm->frame);
+    int cright = draw_creature(canvas, 24, 28, disp_state, vm->frame);
+
+    /* Attention glyph next to the sprite: ! when input is needed, ? for approval. */
+    if(disp_state == SONAR_STATE_WAITING_INPUT || disp_state == SONAR_STATE_WAITING_APPROVAL) {
+        if(vm->frame % 2) { /* blink */
+            canvas_set_font(canvas, FontPrimary);
+            canvas_draw_str(
+                canvas, cright + 2, 24,
+                disp_state == SONAR_STATE_WAITING_INPUT ? "!" : "?");
+            canvas_set_font(canvas, FontSecondary);
+        }
+    }
 
     /* Right: compact usage bars */
     draw_minibar(canvas, 13, "SESS", m.ctx_valid, m.ctx_pct);
     draw_minibar(canvas, 25, "5H", m.five_valid, m.five_pct);
     draw_minibar(canvas, 37, "WEEK", m.seven_valid, m.seven_pct);
 
-    /* Bottom strip */
-    canvas_draw_line(canvas, 0, 50, 127, 50);
+    /* Bottom bar: only when there is something to say. Working shows the
+     * spinner + verb + timer; input/approval show a status line; idle shows
+     * nothing (no bar at all). */
     if(disp_state == SONAR_STATE_WORKING) {
+        canvas_draw_line(canvas, 0, 50, 127, 50);
         draw_spark(canvas, 6, 57, (float)vm->frame * 0.45f, 5, 3);
 
-        /* run timer from when work began */
         uint32_t secs = 0;
         if(m.work_start_tick) {
             uint32_t now = furi_get_tick();
@@ -220,9 +206,7 @@ static void main_draw(Canvas* canvas, void* model_v) {
             if(!freq) freq = 1000;
             if(now >= m.work_start_tick) secs = (now - m.work_start_tick) / freq;
         }
-        /* Pick a random verb per work-session, re-rolled every 3s. The key
-         * changes when the session restarts (work_start_tick) or the 3s bucket
-         * advances, so it never sticks on one word and varies each time. */
+        /* Random verb per work-session, re-rolled ~every 30s. */
         uint32_t key = m.work_start_tick + secs / 30 + (vm->preview >= 0 ? vm->frame / 24 : 0);
         if(key != vm->phrase_key) {
             vm->phrase_key = key;
@@ -230,7 +214,7 @@ static void main_draw(Canvas* canvas, void* model_v) {
         }
         char ph[16];
         strlcpy(ph, PHRASES[vm->phrase_idx], sizeof(ph));
-        if(ph[0] >= 'a' && ph[0] <= 'z') ph[0] = (char)(ph[0] - 32); /* capitalise */
+        if(ph[0] >= 'a' && ph[0] <= 'z') ph[0] = (char)(ph[0] - 32);
 
         char line[72];
         if(m.tokens_valid) {
@@ -245,17 +229,23 @@ static void main_draw(Canvas* canvas, void* model_v) {
                 (unsigned long)(secs % 60));
         }
         canvas_draw_str(canvas, 14, 61, line);
-    } else {
-        canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str(canvas, 2, 62, state_label(disp_state));
-        canvas_set_font(canvas, FontSecondary);
-        if(vm->preview >= 0) canvas_draw_str(canvas, 70, 61, "demo");
-        else if(disp_state == SONAR_STATE_DONE && m.tokens_valid) {
+    } else if(disp_state == SONAR_STATE_WAITING_INPUT) {
+        canvas_draw_line(canvas, 0, 50, 127, 50);
+        canvas_draw_str(canvas, 4, 61, "input needed");
+    } else if(disp_state == SONAR_STATE_WAITING_APPROVAL) {
+        canvas_draw_line(canvas, 0, 50, 127, 50);
+        canvas_draw_str(canvas, 4, 61, "approval needed");
+    } else if(disp_state == SONAR_STATE_DONE) {
+        canvas_draw_line(canvas, 0, 50, 127, 50);
+        canvas_draw_str(canvas, 4, 61, "done");
+        if(m.tokens_valid) {
             char tok[24];
             fmt_tokens(tok, sizeof(tok), m.tokens);
             canvas_draw_str(canvas, 70, 61, tok);
         }
     }
+    /* idle: no bottom bar */
+    if(vm->preview >= 0) canvas_draw_str(canvas, 104, 61, "demo");
 }
 
 static bool main_input(InputEvent* event, void* ctx) {
