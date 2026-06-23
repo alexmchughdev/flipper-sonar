@@ -43,7 +43,8 @@ typedef struct Sonar {
 
     /* UART worker */
     FuriThread* worker;
-    FuriHalSerialHandle* serial;
+    FuriHalSerialHandle* serial; /* board mode: GPIO USART handle */
+    FuriHalUsbInterface* usb_prev; /* USB mode: USB config to restore on exit */
     FuriStreamBuffer* rx_stream;
     volatile bool worker_running;
 

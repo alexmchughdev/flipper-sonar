@@ -1,6 +1,8 @@
 #include "sonar_i.h"
 #include "sonar_uart.h"
 #include <expansion/expansion.h>
+#include <furi_hal_usb.h>
+#include <furi_hal_usb_cdc.h>
 
 /* USART on the expansion header = pins 13 (TX) / 14 (RX), the channel that does
  * not fight the Flipper CLI on the USB/LPUART bridge. */
@@ -11,9 +13,7 @@
 #define WORKER_TICK_MS 250
 #define STALE_AFTER_MS 30000 /* 3 missed heartbeats */
 
-/* ISR context: pull each received byte into the stream buffer and nothing else.
- * furi_stream_buffer_send is ISR-safe and wakes the blocked worker; we must NOT
- * touch thread flags or the mutex here. No allocation, no parsing. */
+/* Board mode: GPIO USART RX. ISR context — only the ISR-safe stream send. */
 static void rx_isr(FuriHalSerialHandle* handle, FuriHalSerialRxEvent ev, void* ctx) {
     Sonar* app = ctx;
     if(ev & FuriHalSerialRxEventData) {
@@ -21,6 +21,24 @@ static void rx_isr(FuriHalSerialHandle* handle, FuriHalSerialRxEvent ev, void* c
         furi_stream_buffer_send(app->rx_stream, &b, 1, 0);
     }
 }
+
+/* USB mode: CDC RX. Runs in USB callback context; drain CDC into the stream
+ * buffer (ISR-safe send) and nothing else. */
+#define SONAR_CDC_IF 0
+static void cdc_rx(void* ctx) {
+    Sonar* app = ctx;
+    if(!app->rx_stream) return;
+    uint8_t buf[64];
+    int32_t n;
+    do {
+        n = furi_hal_cdc_receive(SONAR_CDC_IF, buf, sizeof(buf));
+        if(n > 0) furi_stream_buffer_send(app->rx_stream, buf, (size_t)n, 0);
+    } while(n == (int32_t)sizeof(buf));
+}
+
+static CdcCallbacks sonar_cdc_cb = {
+    .rx_ep_callback = cdc_rx,
+};
 
 /* Apply one decoded frame to the shared model under the mutex. Returns the
  * notification transition to fire (old/new state) via out-params; the caller
@@ -145,8 +163,20 @@ void sonar_worker_start(Sonar* app) {
     app->worker = furi_thread_alloc_ex("SonarWorker", 2048, worker_thread, app);
     furi_thread_start(app->worker);
 
-    /* The Expansion Module service owns USART (pins 13/14) by default to detect
-     * add-on boards. Disable it so we can use the port; we re-enable on exit. */
+    if(app->config.link_mode == SONAR_LINK_MODE_USB) {
+        /* No board: take over USB CDC and receive frames from a host bridge.
+         * This drops the USB CLI/RPC while the app runs (that's expected). */
+        app->usb_prev = furi_hal_usb_get_config();
+        furi_hal_usb_unlock();
+        if(furi_hal_usb_set_config(&usb_cdc_single, NULL)) {
+            furi_hal_cdc_set_callbacks(SONAR_CDC_IF, &sonar_cdc_cb, app);
+        }
+        return;
+    }
+
+    /* Board mode. The Expansion Module service owns USART (pins 13/14) by
+     * default to detect add-on boards. Disable it so we can use the port; we
+     * re-enable on exit. */
     Expansion* expansion = furi_record_open(RECORD_EXPANSION);
     expansion_disable(expansion);
     furi_record_close(RECORD_EXPANSION);
@@ -162,11 +192,21 @@ void sonar_worker_start(Sonar* app) {
 }
 
 void sonar_worker_stop(Sonar* app) {
-    if(app->serial) {
+    /* Stop the byte source first so nothing pushes to a freed stream. */
+    if(app->serial) { /* board mode */
         furi_hal_serial_async_rx_stop(app->serial);
         furi_hal_serial_deinit(app->serial);
         furi_hal_serial_control_release(app->serial);
         app->serial = NULL;
+
+        Expansion* expansion = furi_record_open(RECORD_EXPANSION);
+        expansion_enable(expansion); /* hand USART back to the expansion service */
+        furi_record_close(RECORD_EXPANSION);
+    }
+    if(app->usb_prev) { /* USB mode: restore the previous USB config (CLI/RPC) */
+        furi_hal_cdc_set_callbacks(SONAR_CDC_IF, NULL, NULL);
+        furi_hal_usb_set_config(app->usb_prev, NULL);
+        app->usb_prev = NULL;
     }
     if(app->worker) {
         /* The worker re-checks worker_running every WORKER_TICK_MS, so it exits
@@ -180,11 +220,6 @@ void sonar_worker_stop(Sonar* app) {
         furi_stream_buffer_free(app->rx_stream);
         app->rx_stream = NULL;
     }
-
-    /* Hand USART back to the Expansion Module service. */
-    Expansion* expansion = furi_record_open(RECORD_EXPANSION);
-    expansion_enable(expansion);
-    furi_record_close(RECORD_EXPANSION);
 }
 
 void sonar_worker_send_provision(Sonar* app) {

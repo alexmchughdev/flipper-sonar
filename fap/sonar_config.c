@@ -14,6 +14,7 @@ void sonar_config_default(SonarConfig* c) {
     strlcpy(c->relay_url, "wss://relay.flipper-sonar.dev", sizeof(c->relay_url));
     c->haptics = true;
     c->sound = true;
+    c->link_mode = SONAR_LINK_MODE_BOARD;
     c->tracked_session = 0;
 }
 
@@ -38,6 +39,7 @@ bool sonar_config_load(SonarConfig* c) {
         uint32_t u32;
         if(flipper_format_read_uint32(ff, "haptics", &u32, 1)) c->haptics = u32 != 0;
         if(flipper_format_read_uint32(ff, "sound", &u32, 1)) c->sound = u32 != 0;
+        if(flipper_format_read_uint32(ff, "link_mode", &u32, 1)) c->link_mode = (uint8_t)u32;
         if(flipper_format_read_uint32(ff, "tracked_session", &u32, 1))
             c->tracked_session = (uint8_t)u32;
         ok = true;
@@ -63,6 +65,8 @@ bool sonar_config_save(const SonarConfig* c) {
         if(!flipper_format_write_uint32(ff, "haptics", &u32, 1)) break;
         u32 = c->sound ? 1 : 0;
         if(!flipper_format_write_uint32(ff, "sound", &u32, 1)) break;
+        u32 = c->link_mode;
+        if(!flipper_format_write_uint32(ff, "link_mode", &u32, 1)) break;
         u32 = c->tracked_session;
         if(!flipper_format_write_uint32(ff, "tracked_session", &u32, 1)) break;
         ok = true;

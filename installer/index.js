@@ -85,7 +85,7 @@ function writeJson(file, obj) {
 function deployRuntime() {
   const dir = runtimeDir();
   fs.mkdirSync(dir, { recursive: true });
-  const files = ["sonar-hook.mjs", "sonar-statusline.mjs"];
+  const files = ["sonar-hook.mjs", "sonar-statusline.mjs", "sonar-usb-bridge.mjs"];
   const out = {};
   for (const f of files) {
     const src = path.join(__dirname, "runtime", f);
@@ -132,7 +132,12 @@ function main() {
     const cleaned = applyUninstall(settings, manifest);
     writeJson(targetPath, cleaned);
     // Remove deployed runtime + manifest.
-    for (const f of ["sonar-hook.mjs", "sonar-statusline.mjs", "install.json"]) {
+    for (const f of [
+      "sonar-hook.mjs",
+      "sonar-statusline.mjs",
+      "sonar-usb-bridge.mjs",
+      "install.json",
+    ]) {
       try {
         fs.rmSync(path.join(runtimeDir(), f));
       } catch {
@@ -167,6 +172,7 @@ function main() {
   writeJson(sPath, updated);
   writeJson(manifestPath, { ...manifest, settingsPath: sPath });
 
+  const wsRelay = relayOrigin.replace(/^http/, "ws");
   process.stdout.write(
     `Sonar paired.
   settings:  ${sPath}
@@ -174,6 +180,11 @@ function main() {
   relay:     ${relayOrigin}
 
 Start (or restart) Claude Code here; the next turn will light up the Flipper.
+
+No WiFi board? Run the USB bridge on the machine the Flipper is plugged into
+(set the FAP's Settings -> Link to USB first):
+  node "${deployed["sonar-usb-bridge.mjs"]}" --sonar ${sonarId} --relay ${wsRelay}
+
 Re-run any time to update; 'npx ... --uninstall' to remove cleanly.
 `,
   );
