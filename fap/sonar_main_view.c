@@ -83,7 +83,7 @@ static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame
     /* four legs in two pairs, symmetric (left pair mirrored to the right). */
     int ly = oy + 4 * bs, lh = bs + 1, lw = bs - 1;
     int total = 9 * bs;
-    int l1 = ox + 1 * bs + 1, l2 = ox + 2 * bs + 2;
+    int l1 = ox + 1 * bs, l2 = ox + 2 * bs + 2; /* l1 flush with body edge */
     int r1 = ox + total - (l1 - ox) - lw, r2 = ox + total - (l2 - ox) - lw;
     canvas_draw_box(c, l1, ly, lw, lh);
     canvas_draw_box(c, l2, ly, lw, lh);

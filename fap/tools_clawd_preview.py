@@ -41,7 +41,7 @@ box(ox + 8*BS, oy + 2*BS, BS, BS)
 EYE_W = 2
 LEG_W = 4          # ~2x eye
 total = 9*BS
-l1 = ox + 1*BS + 1
+l1 = ox + 1*BS        # outer leg flush with body edge
 l2 = ox + 2*BS + 2
 r1 = ox + total - (l1 - ox) - LEG_W
 r2 = ox + total - (l2 - ox) - LEG_W
