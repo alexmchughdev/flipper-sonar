@@ -82,10 +82,7 @@ static void apply_frame(
             m->seven_pct = s.seven_day_pct;
             m->seven_valid = true;
         }
-        if(s.flags & SONAR_F_COST) {
-            m->cost_cents = s.cost_cents;
-            m->cost_valid = true;
-        }
+        /* cost is intentionally not displayed (usage matters, not $ on subs) */
         if(s.flags & SONAR_F_MODEL) strlcpy(m->model, s.model, sizeof(m->model));
         if(s.flags & SONAR_F_TOKENS) {
             m->tokens = (uint32_t)s.tokens_h * 100u;

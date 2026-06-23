@@ -31,8 +31,6 @@ typedef struct {
     bool five_valid;
     uint8_t seven_pct;
     bool seven_valid;
-    uint16_t cost_cents;
-    bool cost_valid;
     uint32_t tokens; /* absolute output tokens */
     bool tokens_valid;
 
@@ -53,8 +51,7 @@ static inline void sonar_model_init(SonarModel* m) {
     m->model[0] = '\0';
     m->link = SonarLinkConnecting;
     m->ctx_pct = m->five_pct = m->seven_pct = 0;
-    m->ctx_valid = m->five_valid = m->seven_valid = m->cost_valid = false;
-    m->cost_cents = 0;
+    m->ctx_valid = m->five_valid = m->seven_valid = false;
     m->tokens = 0;
     m->tokens_valid = false;
     m->state = SONAR_STATE_IDLE;
