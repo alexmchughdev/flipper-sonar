@@ -23,8 +23,13 @@ static void rx_isr(FuriHalSerialHandle* handle, FuriHalSerialRxEvent ev, void* c
 }
 
 /* USB mode: CDC RX. Runs in USB callback context; drain CDC into the stream
- * buffer (ISR-safe send) and nothing else. */
-#define SONAR_CDC_IF 0
+ * buffer (ISR-safe send) and nothing else.
+ *
+ * We use the DUAL CDC config so the Flipper CLI/RPC keeps working on channel 0
+ * (qFlipper, ufbt, and `storage` all keep functioning) while Sonar receives its
+ * telemetry on channel 1. This makes USB mode non-destructive: exiting restores
+ * the single-CDC CLI cleanly, and the host bridge writes to the 2nd serial node. */
+#define SONAR_CDC_IF 1
 static void cdc_rx(void* ctx) {
     Sonar* app = ctx;
     if(!app->rx_stream) return;
@@ -174,7 +179,7 @@ void sonar_worker_start(Sonar* app) {
          * This drops the USB CLI/RPC while the app runs (that's expected). */
         app->usb_prev = furi_hal_usb_get_config();
         furi_hal_usb_unlock();
-        if(furi_hal_usb_set_config(&usb_cdc_single, NULL)) {
+        if(furi_hal_usb_set_config(&usb_cdc_dual, NULL)) {
             furi_hal_cdc_set_callbacks(SONAR_CDC_IF, &sonar_cdc_cb, app);
         }
         return;

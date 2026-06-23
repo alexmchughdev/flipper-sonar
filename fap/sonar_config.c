@@ -4,7 +4,7 @@
 #include <flipper_format/flipper_format.h>
 #include <furi.h>
 
-#define CONFIG_HEADER "Flipper Sonar Config"
+#define CONFIG_HEADER "Flipper Claudeogotchi Config"
 #define CONFIG_VERSION 1
 
 void sonar_config_default(SonarConfig* c) {

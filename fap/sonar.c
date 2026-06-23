@@ -63,7 +63,7 @@ static Sonar* sonar_alloc(void) {
 
     /* Menu */
     app->menu = submenu_alloc();
-    submenu_set_header(app->menu, "Flipper Sonar");
+    submenu_set_header(app->menu, "Flipper Claudeogotchi");
     submenu_add_item(app->menu, "Live View", MenuLiveView, menu_callback, app);
     submenu_add_item(app->menu, "WiFi Setup", MenuWifiSetup, menu_callback, app);
     submenu_add_item(app->menu, "Settings", MenuSettings, menu_callback, app);

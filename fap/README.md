@@ -1,4 +1,4 @@
-# Flipper Sonar FAP
+# Flipper Claudeogotchi FAP
 
 The Flipper Zero app. 128×64 mono. Renders one state object fed by the UART
 worker: header (model + link glyph), four bars (context, 5h, 7d, cost vs soft

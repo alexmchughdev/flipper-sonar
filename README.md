@@ -1,4 +1,4 @@
-# Flipper Sonar
+# Flipper Claudeogotchi
 
 Ambient status display for **Claude Code** on a **Flipper Zero**. It sits on your
 desk and shows what a Claude Code session is doing *right now* — model, context
