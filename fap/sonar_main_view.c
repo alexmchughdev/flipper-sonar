@@ -8,7 +8,6 @@ typedef struct {
     Sonar* app;
     FuriTimer* timer;
     uint8_t frame; /* animation frame counter */
-    int preview; /* -1 = live state; 0..4 = forced state for sprite preview (OK key) */
     uint32_t phrase_key; /* identity of the current phrase slot (session + 3s bucket) */
     uint16_t phrase_idx; /* currently shown spinner verb */
 } MainViewModel;
@@ -178,7 +177,7 @@ static void main_draw(Canvas* canvas, void* model_v) {
     m = app->model;
     furi_mutex_release(app->mutex);
 
-    uint8_t disp_state = vm->preview >= 0 ? (uint8_t)vm->preview : m.state;
+    uint8_t disp_state = m.state;
 
     canvas_set_font(canvas, FontSecondary);
 
@@ -191,8 +190,8 @@ static void main_draw(Canvas* canvas, void* model_v) {
      * to normal even though the state stays 'done'. */
     uint8_t face_state = disp_state;
     if(disp_state == SONAR_STATE_DONE) {
-        bool celebrate = vm->preview >= 0; /* always show it in preview */
-        if(!celebrate && m.state_tick) {
+        bool celebrate = false;
+        if(m.state_tick) {
             uint32_t now = furi_get_tick();
             if(now - m.state_tick < furi_ms_to_ticks(3000)) celebrate = true;
         }
@@ -233,7 +232,7 @@ static void main_draw(Canvas* canvas, void* model_v) {
             if(now >= m.work_start_tick) secs = (now - m.work_start_tick) / freq;
         }
         /* Random verb per work-session, re-rolled ~every 30s. */
-        uint32_t key = m.work_start_tick + secs / 30 + (vm->preview >= 0 ? vm->frame / 24 : 0);
+        uint32_t key = m.work_start_tick + secs / 30;
         if(key != vm->phrase_key) {
             vm->phrase_key = key;
             vm->phrase_idx = furi_hal_random_get() % PHRASE_COUNT;
@@ -271,7 +270,6 @@ static void main_draw(Canvas* canvas, void* model_v) {
         }
     }
     /* idle: no bottom bar */
-    if(vm->preview >= 0) canvas_draw_str(canvas, 104, 61, "demo");
 }
 
 static bool main_input(InputEvent* event, void* ctx) {
@@ -294,15 +292,6 @@ static bool main_input(InputEvent* event, void* ctx) {
         }
         furi_mutex_release(app->mutex);
         sonar_config_save(&app->config);
-        return true;
-    }
-
-    if(event->key == InputKeyOk) {
-        with_view_model(
-            app->main_view,
-            MainViewModel * vm,
-            { vm->preview = (vm->preview >= SONAR_STATE_DONE) ? -1 : vm->preview + 1; },
-            true);
         return true;
     }
     return false;
@@ -343,7 +332,6 @@ View* sonar_main_view_alloc(Sonar* app) {
             vm->app = app;
             vm->timer = NULL;
             vm->frame = 0;
-            vm->preview = -1;
             vm->phrase_key = 0xFFFFFFFF;
             vm->phrase_idx = 0;
         },
