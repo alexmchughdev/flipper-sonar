@@ -75,9 +75,12 @@ static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame
         for(int col = 0; col < 9; col++)
             if(G[r][col] == '#') canvas_draw_box(c, ox + col * bs, oy + r * bs, bs, bs);
 
-    /* two thin legs under the eyes */
-    canvas_draw_box(c, ox + 2 * bs + 1, oy + 5 * bs, bs - 2, bs + 1);
-    canvas_draw_box(c, ox + 6 * bs + 1, oy + 5 * bs, bs - 2, bs + 1);
+    /* four thin legs in two pairs (left pair cols 2-3, right pair cols 5-6) */
+    int ly = oy + 5 * bs, lh = bs + 1, lw = bs - 3;
+    canvas_draw_box(c, ox + 2 * bs + 1, ly, lw, lh);
+    canvas_draw_box(c, ox + 3 * bs + 1, ly, lw, lh);
+    canvas_draw_box(c, ox + 5 * bs + 1, ly, lw, lh);
+    canvas_draw_box(c, ox + 6 * bs + 1, ly, lw, lh);
 
     /* eyes, punched white */
     canvas_set_color(c, ColorWhite);
