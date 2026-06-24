@@ -72,6 +72,13 @@ bridge: ## No-board USB stream: make bridge ID=AB12CD [RELAY=ws://host:8787]
 	@test -n "$(ID)" || { echo "usage: make bridge ID=<pairing-code> [RELAY=ws://host:8787]"; exit 1; }
 	node installer/runtime/claudeogotchi-usb-bridge.mjs --claudeogotchi $(ID) --relay $(WS_RELAY)
 
+.PHONY: up
+up: ## Run relay + USB bridge together (backgrounded): make up ID=AB12CD
+	@test -n "$(ID)" || { echo "usage: make up ID=<pairing-code>"; exit 1; }
+	@echo "starting relay on :$(RELAY_PORT) and USB bridge for $(ID)..."
+	@(cd relay && node src/index.ts --self-host --port $(RELAY_PORT) >/tmp/claudeogotchi-relay.log 2>&1 &) ; \
+	  sleep 1 ; node installer/runtime/claudeogotchi-usb-bridge.mjs --claudeogotchi $(ID) --relay ws://127.0.0.1:$(RELAY_PORT)
+
 .PHONY: sprite
 sprite: ## Re-render the Clawd sprite + full-screen mockup (docs/img)
 	python3 fap/tools_clawd_preview.py

@@ -47,9 +47,8 @@ static Claudeogotchi* claudeogotchi_alloc(void) {
     app->mutex = furi_mutex_alloc(FuriMutexTypeNormal);
     claudeogotchi_model_init(&app->model);
 
-    if(!claudeogotchi_config_load(&app->config)) {
-        /* First run: mint a pairing code and persist a default config. */
-    }
+    /* config_load fills defaults internally; on first run mint a pairing code. */
+    claudeogotchi_config_load(&app->config);
     if(app->config.claudeogotchi_id[0] == '\0') {
         gen_claudeogotchi_id(app->config.claudeogotchi_id);
         claudeogotchi_config_save(&app->config);

@@ -21,7 +21,7 @@ test("buildStats maps all fields and strips cwd to a basename", () => {
   assert.equal(s.ctxPct, 42);
   assert.equal(s.fiveHrPct, 28);
   assert.equal(s.sevenDayPct, 18);
-  assert.equal(s.costUsd, 4.83);
+  assert.ok(!("costUsd" in s), "cost is not sent to the device (shown only in the terminal)");
   assert.equal(s.project, "myrepo");
   // PRIVACY: no absolute path anywhere.
   assert.ok(!JSON.stringify(s).includes("/Users/me"));

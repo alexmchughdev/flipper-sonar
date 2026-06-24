@@ -154,13 +154,17 @@ static int32_t worker_thread(void* ctx) {
          * stale-detection still runs on a quiet link. */
         size_t n = furi_stream_buffer_receive(
             app->rx_stream, chunk, sizeof(chunk), furi_ms_to_ticks(WORKER_TICK_MS));
+        bool got_frame = false;
         for(size_t i = 0; i < n; i++) {
             if(claudeogotchi_parser_push(&parser, chunk[i], &frame)) {
                 uint8_t old_s, new_s;
                 apply_frame(app, &frame, &old_s, &new_s);
                 if(old_s != new_s) claudeogotchi_notify_transition(app, old_s, new_s);
+                got_frame = true;
             }
         }
+        /* Paint immediately on data instead of waiting for the animation tick. */
+        if(got_frame) claudeogotchi_main_view_refresh(app->main_view);
         check_stale(app);
     }
     return 0;

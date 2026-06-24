@@ -51,7 +51,7 @@ of context each; this is a log, not a discussion.
 
 ## Product / FAP UI (post-hardware iteration)
 - **Renamed to "Flipper Claudeogotchi"** (appid `claudeogotchi`); the on-screen
-  character is **Clawd**, Claude Code's 8-bit mascot, traced 1:1 from reference
+  character is **Clawd**, Claude Code's 8-bit mascot, an original 1-bit creature inspired by the Claude Code
   art (flat-top body, square side tabs sized so head-above = 2× tab height and
   gap-below = tab height, two thin wide-set eye slits, four symmetric legs with
   the outer pair flush to the body).

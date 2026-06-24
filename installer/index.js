@@ -77,9 +77,29 @@ function readJson(file) {
   }
 }
 
+/**
+ * Read settings, distinguishing "missing" (ok, treat as {}) from "exists but
+ * unparseable" (abort — never clobber a config we can't safely merge into).
+ */
+function readSettingsOrAbort(file) {
+  if (!fs.existsSync(file)) return {};
+  const v = readJson(file);
+  if (v === null || typeof v !== "object") {
+    process.stderr.write(
+      `Error: ${file} exists but is not valid JSON. Refusing to overwrite it.\n` +
+        `Fix or remove it, then re-run.\n`,
+    );
+    process.exit(1);
+  }
+  return v;
+}
+
+/** Atomic write: temp file + rename, so a crash can't truncate the real config. */
 function writeJson(file, obj) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(obj, null, 2) + "\n");
+  const tmp = `${file}.tmp-${process.pid}`;
+  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2) + "\n");
+  fs.renameSync(tmp, file);
 }
 
 function deployRuntime() {
@@ -159,7 +179,7 @@ function main() {
 
   const relayOrigin = normalizeRelayOrigin(args.relay);
   const deployed = deployRuntime();
-  const settings = readJson(sPath) || {};
+  const settings = readSettingsOrAbort(sPath);
 
   const { settings: updated, manifest } = applyInstall(settings, {
     nodeBin: process.execPath,

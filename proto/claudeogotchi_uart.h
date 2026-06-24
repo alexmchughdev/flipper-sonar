@@ -318,6 +318,7 @@ typedef struct {
 /* Read a length-prefixed string at *off into dst (cap incl. NUL). 1 on success. */
 static inline int
     claudeogotchi__read_str(const uint8_t* p, uint8_t len, size_t* off, char* dst, size_t cap) {
+    if(cap == 0) return 0; /* guard: cap-1 below would wrap */
     if(*off >= len) return 0;
     uint8_t slen = p[(*off)++];
     if(*off + slen > len) return 0;

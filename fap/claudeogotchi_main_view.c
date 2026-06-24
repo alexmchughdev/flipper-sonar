@@ -302,6 +302,13 @@ static void main_timer_cb(void* ctx) {
     with_view_model(view, MainViewModel * vm, { vm->frame++; }, true);
 }
 
+/* Force an immediate redraw — called by the UART worker when a frame arrives, so
+ * data lands on screen at once instead of waiting for the next animation tick. */
+void claudeogotchi_main_view_refresh(View* view) {
+    if(!view) return;
+    with_view_model(view, MainViewModel * vm, { (void)vm; }, true);
+}
+
 static void main_enter(void* ctx) {
     Claudeogotchi* app = ctx;
     View* view = app->main_view;

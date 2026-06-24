@@ -1,11 +1,16 @@
 # Flipper Claudeogotchi
 
-A Claude Code **Tamagotchi** for your Flipper Zero. **Clawd** — Claude Code's
+A Claude Code **virtual pet** for your Flipper Zero. **Clawd** — Claude Code's
 little 8-bit creature — lives on your desk and reacts to what your Claude Code
 session is doing right now: he works while you work (spinning spark + the real
 Claude spinner verbs + a run timer), shows usage bars, blinks a `!`/`?` when a
 turn needs you, and does a happy `> <` when it finishes — with a chime and a
 buzz.
+
+> **Unofficial, fan-made project — not affiliated with, endorsed by, or
+> sponsored by Anthropic or Bandai.** "Claude" and "Claude Code" are trademarks
+> of Anthropic; "Flipper Zero" of Flipper Devices. The names are used
+> nominatively only to describe what this tool interoperates with.
 
 It works no matter where Claude Code runs — **local, an SSH box, or a remote dev
 container** — because the telemetry comes from inside the Claude Code process
@@ -19,6 +24,17 @@ container** — because the telemetry comes from inside the Claude Code process
 ---
 
 ## Quick start
+
+> Prereqs: **Node ≥ 22.6** (the relay runs TypeScript via native type-stripping),
+> Python 3, and a C compiler. A Flipper Zero for the app; the WiFi board is
+> optional (USB path needs no board).
+
+**Easiest: hand it to Claude Code.** After cloning, paste the prompt in
+[`docs/setup-prompt.md`](docs/setup-prompt.md) into Claude Code in this repo and
+it will set everything up for you (install, build/flash, relay, pair, bridge),
+pausing before anything that touches hardware or your config.
+
+Or do it yourself:
 
 ```bash
 make setup        # one-time: install deps (relay + ufbt)

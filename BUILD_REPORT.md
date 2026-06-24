@@ -1,6 +1,6 @@
 # Build report — Flipper Claudeogotchi
 
-A Claude Code Tamagotchi (**Clawd**) for the Flipper Zero. Built end to end from
+A Claude Code virtual pet (**Clawd**) for the Flipper Zero. Built end to end from
 `SPEC.md`, then iterated on real hardware. Summary of what exists, what's
 verified, what's stubbed, and how to run it.
 

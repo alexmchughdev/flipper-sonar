@@ -5,7 +5,7 @@ Telemetry-only reverse WebSocket tunnel. One topic per claudeogotchi ID, one pro
 Stateless except for the last-known state per topic, held in memory so a freshly
 connected bridge gets an immediate snapshot. No database.
 
-This is a fork *of the transport pattern* from roostercoopllc/flipper-mcp's
+This is an independent reimplementation of the transport pattern from roostercoopllc/flipper-mcp's
 reverse WS tunnel, with all device-control tooling removed — Claudeogotchi is one
 direction only. See [decisions.md](../docs/decisions.md) for why it's TypeScript.
 

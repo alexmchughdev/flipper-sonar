@@ -107,8 +107,8 @@ export function buildStats(claudeogotchiId, j) {
   const seven = get(j, ["rate_limits", "seven_day", "used_percentage"]);
   if (typeof seven === "number") payload.sevenDayPct = seven;
 
-  const cost = get(j, ["cost", "total_cost_usd"]);
-  if (typeof cost === "number") payload.costUsd = cost;
+  // cost is shown in the local terminal status line (renderLine) but not sent to
+  // the device — the FAP displays usage, not $ (only an estimate on subs).
 
   // Output tokens from the most recent response (what the terminal shows as
   // "↓ N tokens"). Field path per the Claude Code statusline schema.

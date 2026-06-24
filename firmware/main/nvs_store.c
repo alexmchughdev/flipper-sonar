@@ -52,12 +52,3 @@ bool nvs_store_save(const claudeogotchi_cfg_t* cfg) {
     if(e == ESP_OK) ESP_LOGI(TAG, "saved config for claudeogotchi id %s", cfg->claudeogotchi_id);
     return e == ESP_OK;
 }
-
-void nvs_store_clear(void) {
-    nvs_handle_t h;
-    if(nvs_open(NS, NVS_READWRITE, &h) == ESP_OK) {
-        nvs_erase_all(h);
-        nvs_commit(h);
-        nvs_close(h);
-    }
-}

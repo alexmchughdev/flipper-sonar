@@ -206,7 +206,10 @@ function readStr(buf: Uint8Array, off: { i: number }): string {
 
 export function decodePayload(type: number, payload: Uint8Array): Decoded | null {
   const off = { i: 0 };
+  // Length guards mirror the C decoders so both ends reject malformed frames
+  // identically (CRC normally protects this; this is defense in depth).
   if (type === T_STATS) {
+    if (payload.length < 8) return null;
     const session = payload[off.i++];
     const flags = payload[off.i++];
     const ctx = payload[off.i++];
@@ -232,6 +235,7 @@ export function decodePayload(type: number, payload: Uint8Array): Decoded | null
     };
   }
   if (type === T_EVENT) {
+    if (payload.length < 2) return null;
     const session = payload[off.i++];
     const state = STATE_NAME[payload[off.i++]];
     const tool = readStr(payload, off);
@@ -245,6 +249,7 @@ export function decodePayload(type: number, payload: Uint8Array): Decoded | null
     };
   }
   if (type === T_LINK) {
+    if (payload.length < 1) return null;
     return { type: "link", link: LINK_NAME[payload[0]] };
   }
   if (type === T_HEARTBEAT) {

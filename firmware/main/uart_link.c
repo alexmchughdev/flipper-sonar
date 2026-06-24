@@ -64,7 +64,7 @@ static void rx_task(void* arg) {
                 if(frame.type == CLAUDEOGOTCHI_T_PROVISION && s_on_provision) {
                     ClaudeogotchiProvision prov;
                     if(claudeogotchi_decode_provision(frame.payload, frame.payload_len, &prov)) {
-                        ESP_LOGI(TAG, "provision: ssid=%s id=%s", prov.ssid, prov.claudeogotchi_id);
+                        ESP_LOGI(TAG, "provision received (%d-byte ssid)", (int)strlen(prov.ssid));
                         s_on_provision(&prov);
                     }
                 }

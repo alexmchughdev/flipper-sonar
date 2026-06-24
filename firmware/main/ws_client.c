@@ -121,12 +121,19 @@ static void on_ws_event(void* arg, esp_event_base_t base, int32_t id, void* even
 }
 
 void ws_client_start(const char* relay_url, const char* claudeogotchi_id) {
+    /* TLS terminates here (SPEC §3.2): refuse anything but wss:// so we never
+     * connect in cleartext and bypass the cert bundle. */
+    if(strncmp(relay_url, "wss://", 6) != 0) {
+        ESP_LOGE(TAG, "refusing non-wss relay URL; TLS is required");
+        uart_link_send_link(CLAUDEOGOTCHI_LINK_CONNECTING);
+        return;
+    }
     /* Build wss://host/egress/<id> from the provisioned base URL. */
     static char uri[256];
     size_t blen = strlen(relay_url);
     while(blen > 0 && relay_url[blen - 1] == '/') blen--; /* trim trailing slash */
     snprintf(uri, sizeof(uri), "%.*s/egress/%s", (int)blen, relay_url, claudeogotchi_id);
-    ESP_LOGI(TAG, "connecting to %s", uri);
+    ESP_LOGI(TAG, "connecting to relay (egress)");
 
     uart_link_send_link(CLAUDEOGOTCHI_LINK_CONNECTING);
 

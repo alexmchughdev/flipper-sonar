@@ -69,8 +69,12 @@ void app_main(void) {
             xSemaphoreTake(s_pending_lock, portMAX_DELAY);
             next = s_pending;
             xSemaphoreGive(s_pending_lock);
-            ESP_LOGI(TAG, "applying new provisioning for id %s", next.claudeogotchi_id);
+            ESP_LOGI(TAG, "applying new provisioning");
             apply_config(&next);
+        } else {
+            /* Idle tick: emit a UART heartbeat so the FAP's stale-detection
+             * stays honest even when the relay is quiet. */
+            uart_link_send_heartbeat();
         }
     }
 }

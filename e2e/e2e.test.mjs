@@ -71,19 +71,18 @@ test("live state within one turn: statusline stats reach the FAP bars", async ()
   await fireStatusline(id, {
     session_id: "s1",
     model: { display_name: "Opus 4.8" },
-    context_window: { used_percentage: 42 },
+    context_window: { used_percentage: 42, total_output_tokens: 4800 },
     rate_limits: {
       five_hour: { used_percentage: 28 },
       seven_day: { used_percentage: 18 },
     },
-    cost: { total_cost_usd: 4.83 },
     cwd: "/Users/me/clients/acme/myrepo",
   });
   await waitFor(() => fap.model.ctxPct === 42);
   assert.equal(fap.model.model, "Opus 4.8");
   assert.equal(fap.model.fiveHrPct, 28);
   assert.equal(fap.model.sevenDayPct, 18);
-  assert.equal(fap.model.costUsd, 4.83);
+  assert.equal(fap.model.tokens, 4800);
   bridge.close();
 });
 
@@ -144,13 +143,14 @@ test("NULL-SAFETY: absent rate_limits/current_usage hold last value, no flicker"
   });
   await waitFor(() => fap.model.fiveHrPct === 30);
 
-  // Then a sample with NO rate_limits and NO context (current_usage null case).
+  // Then a sample with NO rate_limits and NO context (current_usage null case);
+  // only tokens change, which is our "second sample arrived" signal.
   await fireStatusline(id, {
     session_id: "s1",
     model: { display_name: "Opus 4.8" },
-    cost: { total_cost_usd: 2.5 },
+    context_window: { total_output_tokens: 1500 },
   });
-  await waitFor(() => fap.model.costUsd === 2.5);
+  await waitFor(() => fap.model.tokens === 1500);
 
   // The absent metrics must HOLD, never flicker to zero.
   assert.equal(fap.model.fiveHrPct, 30, "5h held");

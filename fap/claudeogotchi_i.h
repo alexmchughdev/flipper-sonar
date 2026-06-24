@@ -19,11 +19,6 @@ typedef enum {
     ClaudeogotchiViewPopup,
 } ClaudeogotchiViewId;
 
-/* Custom ViewDispatcher events. */
-typedef enum {
-    ClaudeogotchiEventRedraw = 100,
-} ClaudeogotchiCustomEvent;
-
 typedef enum {
     SetupStageNone,
     SetupStageSsid,
@@ -54,7 +49,6 @@ typedef struct Claudeogotchi {
     ClaudeogotchiConfig config;
 
     /* notification transition tracking (owned by worker) */
-    uint8_t last_notified_state;
     uint32_t last_haptic_tick;
 
     /* wifi setup scratch */
@@ -62,14 +56,12 @@ typedef struct Claudeogotchi {
     char ssid_buf[64];
     char pass_buf[64];
     char text_buf[64];
-
-    /* animation frame counter (owned by view) */
-    uint8_t anim_frame;
 } Claudeogotchi;
 
 /* main view */
 View* claudeogotchi_main_view_alloc(Claudeogotchi* app);
 void claudeogotchi_main_view_free(View* view);
+void claudeogotchi_main_view_refresh(View* view); /* force redraw on data arrival */
 
 /* settings */
 void claudeogotchi_settings_build(Claudeogotchi* app);

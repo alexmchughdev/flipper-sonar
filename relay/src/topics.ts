@@ -158,15 +158,20 @@ export class TopicRegistry {
   private hbTimer?: ReturnType<typeof setInterval>;
   private readonly heartbeatMs: number;
   private readonly idleTtlMs: number;
+  private readonly maxTopics: number;
 
-  constructor(heartbeatMs = 10_000, idleTtlMs = 5 * 60_000) {
+  constructor(heartbeatMs = 10_000, idleTtlMs = 5 * 60_000, maxTopics = 4096) {
     this.heartbeatMs = heartbeatMs;
     this.idleTtlMs = idleTtlMs;
+    this.maxTopics = maxTopics;
   }
 
-  private get(claudeogotchiId: string): Topic {
+  /** Get a topic, creating it only if under the cap. Returns undefined when the
+   * cap is hit for a never-seen ID (bounds memory against an ID-spray DoS). */
+  private get(claudeogotchiId: string, create: boolean): Topic | undefined {
     let t = this.topics.get(claudeogotchiId);
-    if (!t) {
+    if (!t && create) {
+      if (this.topics.size >= this.maxTopics) return undefined;
       t = new Topic(claudeogotchiId);
       this.topics.set(claudeogotchiId, t);
     }
@@ -174,11 +179,14 @@ export class TopicRegistry {
   }
 
   publish(msg: WireMessage): WireMessage {
-    return this.get(msg.claudeogotchiId).publish(msg);
+    const t = this.get(msg.claudeogotchiId, true);
+    if (!t) return msg; // at capacity for a new id; drop silently
+    return t.publish(msg);
   }
 
   subscribe(claudeogotchiId: string, sub: Subscriber): () => void {
-    const t = this.get(claudeogotchiId);
+    const t = this.get(claudeogotchiId, true);
+    if (!t) return () => {}; // at capacity; accept the socket but no topic
     t.subscribe(sub);
     return () => t.unsubscribe(sub);
   }

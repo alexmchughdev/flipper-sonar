@@ -48,6 +48,7 @@ export class MockFap {
       fiveHrPct: null,
       sevenDayPct: null,
       costUsd: null,
+      tokens: null,
       state: "idle",
       tool: null,
       project: null,
@@ -66,6 +67,7 @@ export class MockFap {
       if (d.fiveHrPct != null) this.model.fiveHrPct = d.fiveHrPct;
       if (d.sevenDayPct != null) this.model.sevenDayPct = d.sevenDayPct;
       if (d.costUsd != null) this.model.costUsd = d.costUsd;
+      if (d.tokens != null) this.model.tokens = d.tokens;
       if (d.model != null) this.model.model = d.model;
     } else if (d.type === "event") {
       this.seenSessions.add(d.session);

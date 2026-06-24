@@ -18,4 +18,3 @@ bool nvs_store_load(claudeogotchi_cfg_t* out);
 /* Persist config. Returns true on success. */
 bool nvs_store_save(const claudeogotchi_cfg_t* cfg);
 
-void nvs_store_clear(void);
