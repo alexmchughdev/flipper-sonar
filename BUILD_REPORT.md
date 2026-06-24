@@ -72,12 +72,12 @@ make bridge ID=<CODE>      # stream over USB
 `<CODE>` is the 6-char pairing code in the FAP's Settings (auto-minted on first
 run). With the WiFi board instead, flash `firmware/` (`idf.py`), seat it on the
 GPIO header, use the FAP's **WiFi Setup**, and pair the host with
-`npx github:alexmchughdev/flipper-sonar --pair <CODE> --relay https://<relay>`.
+`npx github:alexmchughdev/flipper-claudeogotchi --pair <CODE> --relay https://<relay>`.
 
 ## Notes for the maintainer
 
 - Provision a hosted relay + domain, then update `DEFAULT_RELAY` in
-  `installer/index.js` and the default in `fap/sonar_config.c`.
+  `installer/index.js` and the default in `fap/claudeogotchi_config.c`.
 - For the App Catalog, add a `fap_icon` PNG and reference it in `application.fam`.
 - Device used for bring-up: Flipper Zero on **Momentum `mntm-011`**. For other
   firmware, repoint `ufbt update` (see `docs/decisions.md`).

@@ -1,20 +1,20 @@
-# @flipper-sonar/relay
+# @flipper-claudeogotchi/relay
 
-Telemetry-only reverse WebSocket tunnel. One topic per sonar ID, one producer
+Telemetry-only reverse WebSocket tunnel. One topic per claudeogotchi ID, one producer
 (the Claude Code host) and one or more consumers (ESP32 bridges) per topic.
 Stateless except for the last-known state per topic, held in memory so a freshly
 connected bridge gets an immediate snapshot. No database.
 
 This is a fork *of the transport pattern* from roostercoopllc/flipper-mcp's
-reverse WS tunnel, with all device-control tooling removed — Sonar is one
+reverse WS tunnel, with all device-control tooling removed — Claudeogotchi is one
 direction only. See [decisions.md](../docs/decisions.md) for why it's TypeScript.
 
 ## Endpoints
 
 | Method | Path                | Direction        | Notes |
 |--------|---------------------|------------------|-------|
-| POST   | `/ingest/{sonarId}` | host → relay     | event + stats payloads (SPEC §4). TLS required. |
-| GET    | `/egress/{sonarId}` | relay → bridge   | WS; the bridge dials **out**, so no port forwarding. |
+| POST   | `/ingest/{claudeogotchiId}` | host → relay     | event + stats payloads (SPEC §4). TLS required. |
+| GET    | `/egress/{claudeogotchiId}` | relay → bridge   | WS; the bridge dials **out**, so no port forwarding. |
 | GET    | `/healthz`          | —                | liveness + topic count |
 
 ## Run
@@ -44,8 +44,8 @@ docker compose up --build      # relay + Caddy TLS terminator (edit Caddyfile)
 Or just the relay on a trusted LAN:
 
 ```bash
-docker build -t sonar-relay .
-docker run -p 8787:8787 sonar-relay --self-host
+docker build -t claudeogotchi-relay .
+docker run -p 8787:8787 claudeogotchi-relay --self-host
 ```
 
 ## Privacy

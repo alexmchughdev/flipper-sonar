@@ -1,14 +1,14 @@
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>
-#include "sonar_uart.h"
+#include "claudeogotchi_uart.h"
 
-/* Link state mirrors SONAR_LINK_* from the wire protocol. */
+/* Link state mirrors CLAUDEOGOTCHI_LINK_* from the wire protocol. */
 typedef enum {
-    SonarLinkConnecting = SONAR_LINK_CONNECTING,
-    SonarLinkOnline = SONAR_LINK_ONLINE,
-    SonarLinkStale = SONAR_LINK_STALE,
-} SonarLink;
+    ClaudeogotchiLinkConnecting = CLAUDEOGOTCHI_LINK_CONNECTING,
+    ClaudeogotchiLinkOnline = CLAUDEOGOTCHI_LINK_ONLINE,
+    ClaudeogotchiLinkStale = CLAUDEOGOTCHI_LINK_STALE,
+} ClaudeogotchiLink;
 
 /*
  * The single rendered state object. The three update sources (events, stats,
@@ -21,8 +21,8 @@ typedef enum {
  */
 typedef struct {
     /* header */
-    char model[SONAR_MAX_STR + 1];
-    SonarLink link;
+    char model[CLAUDEOGOTCHI_MAX_STR + 1];
+    ClaudeogotchiLink link;
 
     /* bars */
     uint8_t ctx_pct;
@@ -35,9 +35,9 @@ typedef struct {
     bool tokens_valid;
 
     /* state + sprite */
-    uint8_t state; /* SONAR_STATE_* */
-    char tool[SONAR_MAX_STR + 1];
-    char project[SONAR_MAX_STR + 1];
+    uint8_t state; /* CLAUDEOGOTCHI_STATE_* */
+    char tool[CLAUDEOGOTCHI_MAX_STR + 1];
+    char project[CLAUDEOGOTCHI_MAX_STR + 1];
     uint32_t work_start_tick; /* furi tick when 'working' began (for the run timer) */
     uint32_t state_tick; /* furi tick of the last state change (e.g. done celebration) */
 
@@ -45,16 +45,16 @@ typedef struct {
     uint32_t last_rx_tick; /* furi_get_tick() of last frame */
     uint8_t active_session; /* last session that sent anything */
     uint32_t seen_sessions; /* bitmask of session slots seen */
-} SonarModel;
+} ClaudeogotchiModel;
 
-static inline void sonar_model_init(SonarModel* m) {
+static inline void claudeogotchi_model_init(ClaudeogotchiModel* m) {
     m->model[0] = '\0';
-    m->link = SonarLinkConnecting;
+    m->link = ClaudeogotchiLinkConnecting;
     m->ctx_pct = m->five_pct = m->seven_pct = 0;
     m->ctx_valid = m->five_valid = m->seven_valid = false;
     m->tokens = 0;
     m->tokens_valid = false;
-    m->state = SONAR_STATE_IDLE;
+    m->state = CLAUDEOGOTCHI_STATE_IDLE;
     m->tool[0] = '\0';
     m->project[0] = '\0';
     m->work_start_tick = 0;

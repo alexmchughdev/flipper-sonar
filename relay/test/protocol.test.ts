@@ -3,18 +3,18 @@ import assert from "node:assert/strict";
 import {
   normalizeIngest,
   basenameOnly,
-  isValidSonarId,
+  isValidClaudeogotchiId,
   ProtocolError,
 } from "../src/protocol.ts";
 
-test("sonar IDs are 6 Crockford base32 chars", () => {
-  assert.ok(isValidSonarId("AB12CD"));
-  assert.ok(isValidSonarId("0123HJ"));
-  assert.ok(!isValidSonarId("ab12cd")); // lowercase
-  assert.ok(!isValidSonarId("AB12C")); // too short
-  assert.ok(!isValidSonarId("ABILOU")); // I, L, O, U excluded
-  assert.ok(!isValidSonarId(""));
-  assert.ok(!isValidSonarId(123 as unknown));
+test("claudeogotchi IDs are 6 Crockford base32 chars", () => {
+  assert.ok(isValidClaudeogotchiId("AB12CD"));
+  assert.ok(isValidClaudeogotchiId("0123HJ"));
+  assert.ok(!isValidClaudeogotchiId("ab12cd")); // lowercase
+  assert.ok(!isValidClaudeogotchiId("AB12C")); // too short
+  assert.ok(!isValidClaudeogotchiId("ABILOU")); // I, L, O, U excluded
+  assert.ok(!isValidClaudeogotchiId(""));
+  assert.ok(!isValidClaudeogotchiId(123 as unknown));
 });
 
 test("basenameOnly reduces any path to its final component", () => {
@@ -39,7 +39,7 @@ test("event normalization keeps state + tool, derives project basename", () => {
   assert.equal(msg.state, "waiting-approval");
   assert.equal(msg.tool, "Bash");
   assert.equal(msg.project, "myrepo");
-  assert.equal(msg.sonarId, "AB12CD");
+  assert.equal(msg.claudeogotchiId, "AB12CD");
 });
 
 test("PRIVACY: full cwd never passes through; only a basename does", () => {
@@ -118,13 +118,13 @@ test("rejects unknown type and bad bodies", () => {
   );
 });
 
-test("rejects sonarId mismatch between URL and body", () => {
+test("rejects claudeogotchiId mismatch between URL and body", () => {
   assert.throws(
     () =>
       normalizeIngest("AB12CD", {
         type: "event",
         state: "idle",
-        sonarId: "ZZZZZZ",
+        claudeogotchiId: "ZZZZZZ",
       }),
     ProtocolError,
   );

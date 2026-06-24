@@ -70,7 +70,7 @@ unpair: ## Remove everything the installer added from Claude Code
 .PHONY: bridge
 bridge: ## No-board USB stream: make bridge ID=AB12CD [RELAY=ws://host:8787]
 	@test -n "$(ID)" || { echo "usage: make bridge ID=<pairing-code> [RELAY=ws://host:8787]"; exit 1; }
-	node installer/runtime/sonar-usb-bridge.mjs --sonar $(ID) --relay $(WS_RELAY)
+	node installer/runtime/claudeogotchi-usb-bridge.mjs --claudeogotchi $(ID) --relay $(WS_RELAY)
 
 .PHONY: sprite
 sprite: ## Re-render the Clawd sprite + full-screen mockup (docs/img)

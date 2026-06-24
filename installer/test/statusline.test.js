@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildStats, renderLine } from "../runtime/sonar-statusline.mjs";
+import { buildStats, renderLine } from "../runtime/claudeogotchi-statusline.mjs";
 
 const full = {
   session_id: "sess-1",
@@ -57,7 +57,7 @@ test("NULL-SAFETY: current_usage null (no context/cost) degrades gracefully", ()
 test("buildStats tolerates a totally empty payload", () => {
   const s = buildStats("AB12CD", {});
   assert.equal(s.type, "stats");
-  assert.equal(s.sonarId, "AB12CD");
+  assert.equal(s.claudeogotchiId, "AB12CD");
   assert.ok(!("model" in s));
 });
 

@@ -6,7 +6,7 @@
 #include "esp_log.h"
 #include "cJSON.h"
 #include "uart_link.h"
-#include "sonar_uart.h"
+#include "claudeogotchi_uart.h"
 
 static const char* TAG = "ws_client";
 static esp_websocket_client_handle_t s_client;
@@ -41,12 +41,12 @@ static int json_int(const cJSON* root, const char* key, int dflt) {
 }
 
 static uint8_t state_from_str(const char* s) {
-    if(!s) return SONAR_STATE_IDLE;
-    if(!strcmp(s, "working")) return SONAR_STATE_WORKING;
-    if(!strcmp(s, "waiting-approval")) return SONAR_STATE_WAITING_APPROVAL;
-    if(!strcmp(s, "waiting-input")) return SONAR_STATE_WAITING_INPUT;
-    if(!strcmp(s, "done")) return SONAR_STATE_DONE;
-    return SONAR_STATE_IDLE;
+    if(!s) return CLAUDEOGOTCHI_STATE_IDLE;
+    if(!strcmp(s, "working")) return CLAUDEOGOTCHI_STATE_WORKING;
+    if(!strcmp(s, "waiting-approval")) return CLAUDEOGOTCHI_STATE_WAITING_APPROVAL;
+    if(!strcmp(s, "waiting-input")) return CLAUDEOGOTCHI_STATE_WAITING_INPUT;
+    if(!strcmp(s, "done")) return CLAUDEOGOTCHI_STATE_DONE;
+    return CLAUDEOGOTCHI_STATE_IDLE;
 }
 
 /* Parse one relay JSON message and emit the matching UART frame. */
@@ -57,7 +57,7 @@ static void handle_message(const char* data, int len) {
         return;
     }
     const char* type = json_str(root, "type");
-    uint8_t buf[SONAR_MAX_FRAME];
+    uint8_t buf[CLAUDEOGOTCHI_MAX_FRAME];
     size_t n = 0;
     uint8_t session = (uint8_t)json_int(root, "session", 0);
 
@@ -69,7 +69,7 @@ static void handle_message(const char* data, int len) {
             if(tv && cJSON_IsNumber(tv) && tv->valuedouble >= 0)
                 tokens_h = (int)(tv->valuedouble / 100.0 + 0.5);
         }
-        n = sonar_build_stats(
+        n = claudeogotchi_build_stats(
             session,
             json_pct(root, "ctxPct"),
             json_pct(root, "fiveHrPct"),
@@ -80,7 +80,7 @@ static void handle_message(const char* data, int len) {
             buf,
             sizeof(buf));
     } else if(type && !strcmp(type, "event")) {
-        n = sonar_build_event(
+        n = claudeogotchi_build_event(
             session,
             state_from_str(json_str(root, "state")),
             json_str(root, "tool"),
@@ -88,7 +88,7 @@ static void handle_message(const char* data, int len) {
             buf,
             sizeof(buf));
     } else if(type && !strcmp(type, "heartbeat")) {
-        n = sonar_build_heartbeat(buf, sizeof(buf));
+        n = claudeogotchi_build_heartbeat(buf, sizeof(buf));
     }
 
     if(n) uart_link_send(buf, n);
@@ -102,11 +102,11 @@ static void on_ws_event(void* arg, esp_event_base_t base, int32_t id, void* even
     switch(id) {
     case WEBSOCKET_EVENT_CONNECTED:
         ESP_LOGI(TAG, "relay connected");
-        uart_link_send_link(SONAR_LINK_ONLINE);
+        uart_link_send_link(CLAUDEOGOTCHI_LINK_ONLINE);
         break;
     case WEBSOCKET_EVENT_DISCONNECTED:
         ESP_LOGW(TAG, "relay disconnected");
-        uart_link_send_link(SONAR_LINK_STALE);
+        uart_link_send_link(CLAUDEOGOTCHI_LINK_STALE);
         break;
     case WEBSOCKET_EVENT_DATA:
         /* Only text frames (opcode 0x1) carry JSON. Ignore ping/pong/close. */
@@ -120,15 +120,15 @@ static void on_ws_event(void* arg, esp_event_base_t base, int32_t id, void* even
     }
 }
 
-void ws_client_start(const char* relay_url, const char* sonar_id) {
+void ws_client_start(const char* relay_url, const char* claudeogotchi_id) {
     /* Build wss://host/egress/<id> from the provisioned base URL. */
     static char uri[256];
     size_t blen = strlen(relay_url);
     while(blen > 0 && relay_url[blen - 1] == '/') blen--; /* trim trailing slash */
-    snprintf(uri, sizeof(uri), "%.*s/egress/%s", (int)blen, relay_url, sonar_id);
+    snprintf(uri, sizeof(uri), "%.*s/egress/%s", (int)blen, relay_url, claudeogotchi_id);
     ESP_LOGI(TAG, "connecting to %s", uri);
 
-    uart_link_send_link(SONAR_LINK_CONNECTING);
+    uart_link_send_link(CLAUDEOGOTCHI_LINK_CONNECTING);
 
     esp_websocket_client_config_t cfg = {
         .uri = uri,

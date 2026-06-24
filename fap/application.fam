@@ -2,7 +2,7 @@ App(
     appid="claudeogotchi",
     name="Claudeogotchi",
     apptype=FlipperAppType.EXTERNAL,
-    entry_point="sonar_app",
+    entry_point="claudeogotchi_app",
     stack_size=4 * 1024,
     fap_category="Tools",
     fap_author="flipper-claudeogotchi",

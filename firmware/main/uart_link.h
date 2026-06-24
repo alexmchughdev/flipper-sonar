@@ -1,12 +1,12 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include "sonar_uart.h"
+#include "claudeogotchi_uart.h"
 
 /* UART link to the Flipper. TX is mutex-guarded; an RX task parses inbound
  * provisioning frames (type 0x10) and invokes the registered callback. */
 
-typedef void (*provision_cb_t)(const SonarProvision* prov);
+typedef void (*provision_cb_t)(const ClaudeogotchiProvision* prov);
 
 void uart_link_init(provision_cb_t on_provision);
 

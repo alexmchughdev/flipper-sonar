@@ -1,8 +1,8 @@
 /**
  * Relay server: HTTP(S) ingest + WebSocket egress.
  *
- *  - POST /ingest/{sonarId}   producer -> relay (hooks + statusline)
- *  - GET  /egress/{sonarId}   relay -> bridge (WS; bridge dials OUT, so no port
+ *  - POST /ingest/{claudeogotchiId}   producer -> relay (hooks + statusline)
+ *  - GET  /egress/{claudeogotchiId}   relay -> bridge (WS; bridge dials OUT, so no port
  *                             forwarding is needed on the bridge side)
  *  - GET  /healthz            liveness
  *
@@ -17,7 +17,7 @@ import { WebSocketServer } from "ws";
 import type { WebSocket } from "ws";
 import { TopicRegistry } from "./topics.ts";
 import type { Subscriber } from "./topics.ts";
-import { normalizeIngest, isValidSonarId, ProtocolError } from "./protocol.ts";
+import { normalizeIngest, isValidClaudeogotchiId, ProtocolError } from "./protocol.ts";
 
 export interface RelayOptions {
   port: number;
@@ -61,7 +61,7 @@ export function createRelay(opts: RelayOptions): Promise<RelayHandle> {
 
     const ingest = req.method === "POST" && INGEST_RE.exec(url.split("?")[0]);
     if (ingest) {
-      const sonarId = ingest[1];
+      const claudeogotchiId = ingest[1];
       // Enforce secure transport on the ingest path.
       const forwardedHttps =
         (req.headers["x-forwarded-proto"] || "")
@@ -72,8 +72,8 @@ export function createRelay(opts: RelayOptions): Promise<RelayHandle> {
       if (!secure && !allowInsecure) {
         return json(res, 426, { error: "TLS required for ingest" });
       }
-      if (!isValidSonarId(sonarId)) {
-        return json(res, 400, { error: "invalid sonarId" });
+      if (!isValidClaudeogotchiId(claudeogotchiId)) {
+        return json(res, 400, { error: "invalid claudeogotchiId" });
       }
       readBody(req, maxBody)
         .then((buf) => {
@@ -84,7 +84,7 @@ export function createRelay(opts: RelayOptions): Promise<RelayHandle> {
             return json(res, 400, { error: "invalid JSON" });
           }
           try {
-            const msg = normalizeIngest(sonarId, parsed);
+            const msg = normalizeIngest(claudeogotchiId, parsed);
             registry.publish(msg);
             return json(res, 202, { ok: true });
           } catch (e) {
@@ -108,19 +108,19 @@ export function createRelay(opts: RelayOptions): Promise<RelayHandle> {
     ? https.createServer({ key: opts.tls!.key, cert: opts.tls!.cert }, handler)
     : http.createServer(handler);
 
-  // WS egress: bridge connects out to /egress/{sonarId}.
+  // WS egress: bridge connects out to /egress/{claudeogotchiId}.
   const wss = new WebSocketServer({ noServer: true });
   const subUnsubscribers = new WeakMap<WebSocket, () => void>();
 
   server.on("upgrade", (req, socket, head) => {
     const url = req.url ?? "";
     const m = EGRESS_RE.exec(url.split("?")[0]);
-    if (!m || !isValidSonarId(m[1])) {
+    if (!m || !isValidClaudeogotchiId(m[1])) {
       socket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
       socket.destroy();
       return;
     }
-    const sonarId = m[1];
+    const claudeogotchiId = m[1];
     wss.handleUpgrade(req, socket, head, (ws) => {
       const sub: Subscriber = {
         send: (data) => ws.send(data),
@@ -128,7 +128,7 @@ export function createRelay(opts: RelayOptions): Promise<RelayHandle> {
           return ws.readyState !== ws.OPEN;
         },
       };
-      const unsub = registry.subscribe(sonarId, sub);
+      const unsub = registry.subscribe(claudeogotchiId, sub);
       subUnsubscribers.set(ws, unsub);
       ws.on("close", () => unsub());
       ws.on("error", () => unsub());

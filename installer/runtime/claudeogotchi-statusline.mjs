@@ -10,7 +10,7 @@
  * and is likewise omitted, not zeroed.
  *
  * Usage (set by the installer):
- *   node sonar-statusline.mjs --sonar <ID> --relay <https-origin>
+ *   node claudeogotchi-statusline.mjs --claudeogotchi <ID> --relay <https-origin>
  */
 import { basename } from "node:path";
 import { request as httpsRequest } from "node:https";
@@ -52,11 +52,11 @@ function get(obj, path) {
   return cur == null ? undefined : cur;
 }
 
-function post(origin, sonarId, payload) {
+function post(origin, claudeogotchiId, payload) {
   return new Promise((resolve) => {
     let url;
     try {
-      url = new URL(`${origin.replace(/\/$/, "")}/ingest/${sonarId}`);
+      url = new URL(`${origin.replace(/\/$/, "")}/ingest/${claudeogotchiId}`);
     } catch {
       return resolve();
     }
@@ -88,10 +88,10 @@ function post(origin, sonarId, payload) {
 }
 
 /** Build the stats payload, omitting any metric that is absent/null. */
-export function buildStats(sonarId, j) {
+export function buildStats(claudeogotchiId, j) {
   const payload = {
     type: "stats",
-    sonarId,
+    claudeogotchiId,
     sessionId: get(j, ["session_id"]),
     ts: Math.floor(Date.now() / 1000),
   };
@@ -110,12 +110,11 @@ export function buildStats(sonarId, j) {
   const cost = get(j, ["cost", "total_cost_usd"]);
   if (typeof cost === "number") payload.costUsd = cost;
 
-  // Output tokens — best effort across the field names Claude Code may expose.
+  // Output tokens from the most recent response (what the terminal shows as
+  // "↓ N tokens"). Field path per the Claude Code statusline schema.
   const tokens =
-    get(j, ["cost", "total_output_tokens"]) ??
-    get(j, ["cost", "output_tokens"]) ??
-    get(j, ["context_window", "output_tokens"]) ??
-    get(j, ["output_tokens"]);
+    get(j, ["context_window", "total_output_tokens"]) ??
+    get(j, ["context_window", "current_usage", "output_tokens"]);
   if (typeof tokens === "number") payload.tokens = tokens;
 
   const cwd = get(j, ["cwd"]) ?? get(j, ["workspace", "current_dir"]);
@@ -139,7 +138,7 @@ export function renderLine(j) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const { sonar, relay } = args;
+  const { claudeogotchi, relay } = args;
   const raw = await readStdin();
   let j = {};
   try {
@@ -151,8 +150,8 @@ async function main() {
   // Always print the status line, even if telemetry fails.
   process.stdout.write(renderLine(j) + "\n");
 
-  if (sonar && relay) {
-    await post(relay, sonar, buildStats(sonar, j));
+  if (claudeogotchi && relay) {
+    await post(relay, claudeogotchi, buildStats(claudeogotchi, j));
   }
   process.exit(0);
 }

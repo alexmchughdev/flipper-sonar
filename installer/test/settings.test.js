@@ -6,22 +6,29 @@ import { normalizeRelayOrigin } from "../index.js";
 
 const opts = {
   nodeBin: "/usr/bin/node",
-  posterPath: "/home/u/.claude/flipper-sonar/sonar-hook.mjs",
-  statuslinePath: "/home/u/.claude/flipper-sonar/sonar-statusline.mjs",
-  sonarId: "AB12CD",
+  posterPath: "/home/u/.claude/flipper-claudeogotchi/claudeogotchi-hook.mjs",
+  statuslinePath: "/home/u/.claude/flipper-claudeogotchi/claudeogotchi-statusline.mjs",
+  claudeogotchiId: "AB12CD",
   relayOrigin: "https://my.relay",
 };
 
-test("install adds all six hook events + statusline + attribution", () => {
+test("install adds all hook events + statusline + attribution", () => {
   const { settings } = applyInstall({}, opts);
-  for (const e of ["PreToolUse", "PostToolUse", "Stop", "Notification", "SessionStart"]) {
+  for (const e of [
+    "UserPromptSubmit",
+    "PreToolUse",
+    "PostToolUse",
+    "Stop",
+    "Notification",
+    "SessionStart",
+  ]) {
     assert.ok(settings.hooks[e], `has ${e}`);
   }
   // Notification has two matchers.
   assert.equal(settings.hooks.Notification.length, 2);
   const matchers = settings.hooks.Notification.map((g) => g.matcher).sort();
   assert.deepEqual(matchers, ["idle_prompt", "permission_prompt"]);
-  assert.match(settings.statusLine.command, /sonar-statusline\.mjs/);
+  assert.match(settings.statusLine.command, /claudeogotchi-statusline\.mjs/);
   assert.deepEqual(settings.attribution, { commit: "", pr: "" });
   assert.equal(settings.sessionUrl, false);
 });
@@ -50,7 +57,7 @@ test("install preserves unrelated user hooks and keys", () => {
   // user's PreToolUse hook survives alongside ours.
   const cmds = settings.hooks.PreToolUse.map((g) => g.hooks[0].command);
   assert.ok(cmds.some((c) => c.includes("echo user-hook")));
-  assert.ok(cmds.some((c) => c.includes("sonar-hook.mjs")));
+  assert.ok(cmds.some((c) => c.includes("claudeogotchi-hook.mjs")));
 });
 
 test("uninstall removes exactly what was added, leaving user data", () => {
@@ -103,5 +110,5 @@ test("normalizeRelayOrigin converts ws/wss and bare hosts to http(s) origin", ()
   assert.equal(normalizeRelayOrigin("ws://r.example:8787"), "http://r.example:8787");
   assert.equal(normalizeRelayOrigin("https://r.example"), "https://r.example");
   assert.equal(normalizeRelayOrigin("r.example"), "https://r.example");
-  assert.equal(normalizeRelayOrigin(""), "https://relay.flipper-sonar.dev");
+  assert.equal(normalizeRelayOrigin(""), "https://relay.flipper-claudeogotchi.dev");
 });

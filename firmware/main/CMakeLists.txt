@@ -1,6 +1,6 @@
 idf_component_register(
     SRCS
-        "sonar_main.c"
+        "claudeogotchi_main.c"
         "nvs_store.c"
         "wifi.c"
         "uart_link.c"

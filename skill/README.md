@@ -1,6 +1,6 @@
 # /skill (optional)
 
-Optional Claude Code skill bits for Sonar.
+Optional Claude Code skill bits for Claudeogotchi.
 
 ## `/review` command
 
@@ -21,8 +21,8 @@ cp ../.claude/commands/review.md ~/.claude/commands/review.md
 ## Three-option decision pairing (optional)
 
 claupper's three-option decision skill can label the three choices at a
-`waiting-approval` prompt. If you use claupper alongside Sonar, that skill's
-output can be surfaced; Sonar's `waiting-approval` state already drives the alert
+`waiting-approval` prompt. If you use claupper alongside Claudeogotchi, that skill's
+output can be surfaced; Claudeogotchi's `waiting-approval` state already drives the alert
 pose and chime. Wiring the specific option labels onto the 128×64 display is left
 as an opt-in because it depends on claupper's skill output format. The event
 payload has room (`tool`/`project` fields) to carry a short label if you extend

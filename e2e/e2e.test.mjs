@@ -2,7 +2,7 @@
  * End-to-end proof of the SPEC §8 acceptance criteria that don't need hardware.
  *
  * Chain under test:
- *   real host scripts (sonar-hook.mjs / sonar-statusline.mjs)
+ *   real host scripts (claudeogotchi-hook.mjs / claudeogotchi-statusline.mjs)
  *     -> real relay (self-host mode)
  *       -> mock bridge reframes to UART (shared proto)
  *         -> mock FAP decodes + applies (shared parser, null-safe holds)
@@ -16,10 +16,10 @@ import { createRelay } from "../relay/src/server.ts";
 import { MockBridge, MockFap, waitFor } from "./mock_bridge.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const HOOK = path.join(__dirname, "../installer/runtime/sonar-hook.mjs");
-const STATUS = path.join(__dirname, "../installer/runtime/sonar-statusline.mjs");
+const HOOK = path.join(__dirname, "../installer/runtime/claudeogotchi-hook.mjs");
+const STATUS = path.join(__dirname, "../installer/runtime/claudeogotchi-statusline.mjs");
 
-// Each test uses a fresh sonar ID so session->slot assignment is isolated (the
+// Each test uses a fresh claudeogotchi ID so session->slot assignment is isolated (the
 // relay keeps per-topic slot state for the life of the process).
 const IDS = ["AB12CD", "AB12CE", "AB12CF", "AB12CG", "AB12CH", "AB12CJ", "AB12CK", "AB12CM"];
 let idCounter = 0;
@@ -39,10 +39,10 @@ after(async () => {
 
 /** Fire a hook exactly as Claude Code would: JSON on stdin, args from settings. */
 function fireHook(id, event, state, payload) {
-  return runScript(HOOK, ["--event", event, "--state", state, "--sonar", id, "--relay", origin], payload);
+  return runScript(HOOK, ["--event", event, "--state", state, "--claudeogotchi", id, "--relay", origin], payload);
 }
 function fireStatusline(id, payload) {
-  return runScript(STATUS, ["--sonar", id, "--relay", origin], payload);
+  return runScript(STATUS, ["--claudeogotchi", id, "--relay", origin], payload);
 }
 
 function runScript(script, args, stdinObj) {

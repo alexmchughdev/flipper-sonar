@@ -56,7 +56,7 @@ be done by a headless board — use a phone hotspot; see
 ### 3. Pair Claude Code (where it runs)
 
 ```bash
-npx github:alexmchughdev/flipper-sonar --pair <CODE> --relay https://<your-relay>
+npx github:alexmchughdev/flipper-claudeogotchi --pair <CODE> --relay https://<your-relay>
 ```
 
 Inside a dev container, bake it into `postCreateCommand`. Identical for local,

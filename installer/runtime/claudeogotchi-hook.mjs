@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Host-side hook poster. Claude Code pipes the hook payload as JSON on stdin.
- * This maps it to a Sonar event and POSTs it to the relay ingest endpoint.
+ * This maps it to a Claudeogotchi event and POSTs it to the relay ingest endpoint.
  *
  * PRIVACY (enforced here, on the host, before anything leaves):
  *  - `cwd` is reduced to its basename and sent as `project`. The full path
@@ -9,8 +9,8 @@
  *  - `transcript_path` is never read and never sent.
  *
  * Usage (set by the installer):
- *   node sonar-hook.mjs --event <HookEvent> --state <state> \
- *        --sonar <ID> --relay <https-origin>
+ *   node claudeogotchi-hook.mjs --event <HookEvent> --state <state> \
+ *        --claudeogotchi <ID> --relay <https-origin>
  *
  * Fire-and-forget with a short timeout; failures are swallowed so a hook never
  * breaks a Claude Code turn.
@@ -46,11 +46,11 @@ function readStdin() {
   });
 }
 
-function post(origin, sonarId, payload) {
+function post(origin, claudeogotchiId, payload) {
   return new Promise((resolve) => {
     let url;
     try {
-      url = new URL(`${origin.replace(/\/$/, "")}/ingest/${sonarId}`);
+      url = new URL(`${origin.replace(/\/$/, "")}/ingest/${claudeogotchiId}`);
     } catch {
       return resolve();
     }
@@ -83,8 +83,8 @@ function post(origin, sonarId, payload) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const { event, state, sonar, relay } = args;
-  if (!sonar || !relay) process.exit(0);
+  const { event, state, claudeogotchi, relay } = args;
+  if (!claudeogotchi || !relay) process.exit(0);
 
   const raw = await readStdin();
   let hook = {};
@@ -100,7 +100,7 @@ async function main() {
 
   const payload = {
     type: "event",
-    sonarId: sonar,
+    claudeogotchiId: claudeogotchi,
     sessionId: hook.session_id,
     state: resolvedState,
     ts: Math.floor(Date.now() / 1000),
@@ -114,7 +114,7 @@ async function main() {
     payload.tool = hook.tool_name;
   }
 
-  await post(relay, sonar, payload);
+  await post(relay, claudeogotchi, payload);
   process.exit(0);
 }
 

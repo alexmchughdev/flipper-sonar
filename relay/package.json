@@ -1,13 +1,13 @@
 {
-  "name": "@flipper-sonar/relay",
+  "name": "@flipper-claudeogotchi/relay",
   "version": "0.1.0",
-  "description": "Flipper Sonar relay: reverse WebSocket tunnel, telemetry-only, topic = sonar ID.",
+  "description": "Flipper Claudeogotchi relay: reverse WebSocket tunnel, telemetry-only, topic = claudeogotchi ID.",
   "type": "module",
   "engines": {
     "node": ">=22.6"
   },
   "bin": {
-    "sonar-relay": "src/index.ts"
+    "claudeogotchi-relay": "src/index.ts"
   },
   "scripts": {
     "start": "node src/index.ts",

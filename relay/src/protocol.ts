@@ -1,7 +1,7 @@
 /**
  * Wire protocol + privacy enforcement for the relay.
  *
- * Two payload shapes arrive at POST /ingest/{sonarId}: "event" (from hooks) and
+ * Two payload shapes arrive at POST /ingest/{claudeogotchiId}: "event" (from hooks) and
  * "stats" (from the statusline wrapper). The relay normalizes both into a
  * canonical wire message that the bridge consumes over WS and re-frames as
  * compact UART (SPEC section 5).
@@ -13,7 +13,7 @@
  */
 
 // ---- Canonical states (string literal union; strip-types friendly) ----
-export type SonarState =
+export type ClaudeogotchiState =
   | "idle"
   | "working"
   | "waiting-approval"
@@ -32,13 +32,13 @@ export type WireType = "stats" | "event" | "link" | "heartbeat";
 
 export interface WireMessage {
   type: WireType;
-  sonarId: string;
+  claudeogotchiId: string;
   /** Stable per-session slot index assigned by the topic (0..N-1). */
   session?: number;
   sessionId?: string;
   ts: number;
   // event fields
-  state?: SonarState;
+  state?: ClaudeogotchiState;
   tool?: string;
   project?: string;
   // stats fields
@@ -60,11 +60,11 @@ const FORBIDDEN_KEYS = new Set([
   "cwd", // full cwd forbidden; only `project` (a basename) is allowed through
 ]);
 
-/** A sonar ID is 6 base32 chars (Crockford-ish, upper). */
-const SONAR_ID_RE = /^[0-9A-HJKMNP-TV-Z]{6}$/;
+/** A claudeogotchi ID is 6 base32 chars (Crockford-ish, upper). */
+const CLAUDEOGOTCHI_ID_RE = /^[0-9A-HJKMNP-TV-Z]{6}$/;
 
-export function isValidSonarId(id: unknown): id is string {
-  return typeof id === "string" && SONAR_ID_RE.test(id);
+export function isValidClaudeogotchiId(id: unknown): id is string {
+  return typeof id === "string" && CLAUDEOGOTCHI_ID_RE.test(id);
 }
 
 /** Reduce any path-ish string to its final path component (basename only). */
@@ -96,12 +96,12 @@ export class ProtocolError extends Error {}
 /**
  * Validate + normalize a raw ingest body into a WireMessage. Throws
  * ProtocolError on anything unusable. Strips all forbidden/privacy-sensitive
- * fields. `sonarId` is taken from the URL, not the body (body value, if any,
+ * fields. `claudeogotchiId` is taken from the URL, not the body (body value, if any,
  * must match).
  */
-export function normalizeIngest(sonarId: string, raw: unknown): WireMessage {
-  if (!isValidSonarId(sonarId)) {
-    throw new ProtocolError("invalid sonarId");
+export function normalizeIngest(claudeogotchiId: string, raw: unknown): WireMessage {
+  if (!isValidClaudeogotchiId(claudeogotchiId)) {
+    throw new ProtocolError("invalid claudeogotchiId");
   }
   if (raw === null || typeof raw !== "object") {
     throw new ProtocolError("body must be an object");
@@ -121,8 +121,8 @@ export function normalizeIngest(sonarId: string, raw: unknown): WireMessage {
     }
   }
 
-  if (body.sonarId !== undefined && body.sonarId !== sonarId) {
-    throw new ProtocolError("sonarId mismatch between URL and body");
+  if (body.claudeogotchiId !== undefined && body.claudeogotchiId !== claudeogotchiId) {
+    throw new ProtocolError("claudeogotchiId mismatch between URL and body");
   }
 
   const type = body.type;
@@ -137,7 +137,7 @@ export function normalizeIngest(sonarId: string, raw: unknown): WireMessage {
 
   const msg: WireMessage = {
     type,
-    sonarId,
+    claudeogotchiId,
     ts,
     sessionId: nonEmptyString(body.sessionId, 128),
   };
@@ -153,7 +153,7 @@ export function normalizeIngest(sonarId: string, raw: unknown): WireMessage {
     if (typeof state !== "string" || !VALID_STATES.has(state)) {
       throw new ProtocolError("event requires a valid state");
     }
-    msg.state = state as SonarState;
+    msg.state = state as ClaudeogotchiState;
     const tool = nonEmptyString(body.tool, 32);
     if (tool) msg.tool = tool;
   } else {

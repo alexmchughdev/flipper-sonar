@@ -8,7 +8,7 @@ between the ESP32-S2 bridge and the Flipper STM32.
 
 ## 1. Relay wire protocol (host ↔ relay ↔ bridge)
 
-### Ingest — `POST /ingest/{sonarId}` (TLS required)
+### Ingest — `POST /ingest/{claudeogotchiId}` (TLS required)
 
 Event payload (from hooks):
 
@@ -32,14 +32,14 @@ path-derived field allowed. A full `cwd` is reduced to its basename and the full
 path dropped. `transcript_path` / `transcript` content is dropped
 unconditionally. Every metric is optional and null-safe.
 
-### Egress — `GET /egress/{sonarId}` (WebSocket)
+### Egress — `GET /egress/{claudeogotchiId}` (WebSocket)
 
 The bridge dials **out** to this (no port forwarding). The relay immediately
 replays the last stats + last event per session (snapshot), then streams new
 messages plus a `heartbeat` every ~10s:
 
 ```json
-{ "type": "heartbeat", "sonarId": "AB12CD", "ts": 1750000000 }
+{ "type": "heartbeat", "claudeogotchiId": "AB12CD", "ts": 1750000000 }
 ```
 
 Each forwarded message carries a `session` field (0-based slot) so the FAP can
@@ -49,8 +49,8 @@ track a chosen session without flapping when several are active.
 
 ## 2. UART framing (ESP32 ↔ Flipper)
 
-Canonical definition: [`proto/sonar_uart.h`](../proto/sonar_uart.h) (C) and
-[`proto/sonar_uart.ts`](../proto/sonar_uart.ts) (mirror). A CI diff
+Canonical definition: [`proto/claudeogotchi_uart.h`](../proto/claudeogotchi_uart.h) (C) and
+[`proto/claudeogotchi_uart.ts`](../proto/claudeogotchi_uart.ts) (mirror). A CI diff
 (`proto/test/gen_frames.*`) proves the two are byte-identical.
 
 ### Physical layer

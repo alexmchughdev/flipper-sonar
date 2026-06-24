@@ -1,5 +1,5 @@
 /* TS mirror of gen_frames.c. Output must match byte-for-byte. */
-import * as u from "../sonar_uart.ts";
+import * as u from "../claudeogotchi_uart.ts";
 
 function emit(label: string, buf: Uint8Array): void {
   let hex = "";

@@ -1,10 +1,10 @@
 {
-  "name": "flipper-sonar",
+  "name": "flipper-claudeogotchi",
   "version": "0.1.0",
   "description": "Ambient Claude Code status display on a Flipper Zero. This package is the npx-runnable installer for the Claude Code side.",
   "type": "module",
   "bin": {
-    "flipper-sonar": "installer/index.js"
+    "flipper-claudeogotchi": "installer/index.js"
   },
   "engines": {
     "node": ">=18"

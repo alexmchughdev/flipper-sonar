@@ -3,14 +3,14 @@
  *
  * The bridge connects out to the relay's egress WS exactly as the firmware does,
  * then re-frames each relay JSON message into the compact UART protocol using
- * the SAME shared definition the firmware uses (proto/sonar_uart.ts mirrors
- * sonar_uart.h). The mock FAP parses those UART bytes with the shared parser and
+ * the SAME shared definition the firmware uses (proto/claudeogotchi_uart.ts mirrors
+ * claudeogotchi_uart.h). The mock FAP parses those UART bytes with the shared parser and
  * applies them with the same null-safe "hold last value" rules as the real FAP
  * worker. So a passing test exercises the whole chain:
  *
  *   host scripts -> relay -> bridge reframe -> UART bytes -> FAP decode/apply
  */
-import * as u from "../proto/sonar_uart.ts";
+import * as u from "../proto/claudeogotchi_uart.ts";
 
 /** Mirror of ws_client.c handle_message: relay JSON -> UART frame bytes. */
 export function reframe(msg) {

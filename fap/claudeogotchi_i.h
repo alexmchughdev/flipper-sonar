@@ -8,21 +8,21 @@
 #include <gui/modules/text_input.h>
 #include <gui/modules/popup.h>
 #include <notification/notification.h>
-#include "sonar_state.h"
-#include "sonar_config.h"
+#include "claudeogotchi_state.h"
+#include "claudeogotchi_config.h"
 
 typedef enum {
-    SonarViewMenu,
-    SonarViewMain,
-    SonarViewSettings,
-    SonarViewTextInput,
-    SonarViewPopup,
-} SonarViewId;
+    ClaudeogotchiViewMenu,
+    ClaudeogotchiViewMain,
+    ClaudeogotchiViewSettings,
+    ClaudeogotchiViewTextInput,
+    ClaudeogotchiViewPopup,
+} ClaudeogotchiViewId;
 
 /* Custom ViewDispatcher events. */
 typedef enum {
-    SonarEventRedraw = 100,
-} SonarCustomEvent;
+    ClaudeogotchiEventRedraw = 100,
+} ClaudeogotchiCustomEvent;
 
 typedef enum {
     SetupStageNone,
@@ -30,7 +30,7 @@ typedef enum {
     SetupStagePass,
 } SetupStage;
 
-typedef struct Sonar {
+typedef struct Claudeogotchi {
     Gui* gui;
     ViewDispatcher* view_dispatcher;
     NotificationApp* notifications;
@@ -50,8 +50,8 @@ typedef struct Sonar {
 
     /* shared state */
     FuriMutex* mutex;
-    SonarModel model;
-    SonarConfig config;
+    ClaudeogotchiModel model;
+    ClaudeogotchiConfig config;
 
     /* notification transition tracking (owned by worker) */
     uint8_t last_notified_state;
@@ -65,25 +65,25 @@ typedef struct Sonar {
 
     /* animation frame counter (owned by view) */
     uint8_t anim_frame;
-} Sonar;
+} Claudeogotchi;
 
 /* main view */
-View* sonar_main_view_alloc(Sonar* app);
-void sonar_main_view_free(View* view);
+View* claudeogotchi_main_view_alloc(Claudeogotchi* app);
+void claudeogotchi_main_view_free(View* view);
 
 /* settings */
-void sonar_settings_build(Sonar* app);
+void claudeogotchi_settings_build(Claudeogotchi* app);
 
 /* wifi setup flow */
-void sonar_wifi_setup_start(Sonar* app);
-void sonar_wifi_setup_text_done(Sonar* app);
-void sonar_show_paired_popup(Sonar* app);
-void sonar_show_portal_help(Sonar* app);
+void claudeogotchi_wifi_setup_start(Claudeogotchi* app);
+void claudeogotchi_wifi_setup_text_done(Claudeogotchi* app);
+void claudeogotchi_show_paired_popup(Claudeogotchi* app);
+void claudeogotchi_show_portal_help(Claudeogotchi* app);
 
 /* worker */
-void sonar_worker_start(Sonar* app);
-void sonar_worker_stop(Sonar* app);
-void sonar_worker_send_provision(Sonar* app);
+void claudeogotchi_worker_start(Claudeogotchi* app);
+void claudeogotchi_worker_stop(Claudeogotchi* app);
+void claudeogotchi_worker_send_provision(Claudeogotchi* app);
 
 /* notifications */
-void sonar_notify_transition(Sonar* app, uint8_t old_state, uint8_t new_state);
+void claudeogotchi_notify_transition(Claudeogotchi* app, uint8_t old_state, uint8_t new_state);

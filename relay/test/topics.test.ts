@@ -29,7 +29,7 @@ test("routing: a message only reaches subscribers of its topic", () => {
   assert.equal(a.messages.length, 1);
   assert.equal(b.messages.length, 0);
   const got = JSON.parse(a.messages[0]);
-  assert.equal(got.sonarId, "AAAAAA");
+  assert.equal(got.claudeogotchiId, "AAAAAA");
   assert.equal(got.state, "working");
 });
 

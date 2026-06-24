@@ -1,5 +1,5 @@
 /**
- * sonar_uart.ts — byte-for-byte mirror of sonar_uart.h for the mock bridge and
+ * claudeogotchi_uart.ts — byte-for-byte mirror of claudeogotchi_uart.h for the mock bridge and
  * e2e tests. If you change the wire contract, change BOTH files together.
  *
  * Frame: 0x7E | LEN | TYPE | PAYLOAD[LEN-1] | CRC8
@@ -150,10 +150,10 @@ export function buildProvision(
   ssid: string,
   pass: string,
   relayUrl: string,
-  sonarId: string,
+  claudeogotchiId: string,
 ): Uint8Array {
   const pl: number[] = [];
-  for (const s of [ssid, pass, relayUrl, sonarId]) pushStr(pl, s, 63);
+  for (const s of [ssid, pass, relayUrl, claudeogotchiId]) pushStr(pl, s, 63);
   return encode(T_PROVISION, Uint8Array.from(pl));
 }
 
@@ -188,7 +188,7 @@ export interface DecodedProvision {
   ssid: string;
   pass: string;
   relayUrl: string;
-  sonarId: string;
+  claudeogotchiId: string;
 }
 export type Decoded =
   | DecodedStats
@@ -254,13 +254,13 @@ export function decodePayload(type: number, payload: Uint8Array): Decoded | null
     const ssid = readStr(payload, off);
     const pass = readStr(payload, off);
     const relayUrl = readStr(payload, off);
-    const sonarId = readStr(payload, off);
-    return { type: "provision", ssid, pass, relayUrl, sonarId };
+    const claudeogotchiId = readStr(payload, off);
+    return { type: "provision", ssid, pass, relayUrl, claudeogotchiId };
   }
   return null;
 }
 
-/** Streaming, resync-safe parser mirroring SonarParser in the C header. */
+/** Streaming, resync-safe parser mirroring ClaudeogotchiParser in the C header. */
 export class Parser {
   private state = 0;
   private len = 0;

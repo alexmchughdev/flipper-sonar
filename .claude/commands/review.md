@@ -1,8 +1,8 @@
 ---
-description: Deterministic pre-commit review gate for Flipper Sonar
+description: Deterministic pre-commit review gate for Flipper Claudeogotchi
 ---
 
-# /review — Flipper Sonar review gate
+# /review — Flipper Claudeogotchi review gate
 
 Review the **staged changes** (`git diff --cached`) for this commit. If nothing is
 staged, review the working-tree diff (`git diff`). This gate runs before every

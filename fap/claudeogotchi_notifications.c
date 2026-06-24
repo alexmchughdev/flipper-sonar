@@ -1,4 +1,4 @@
-#include "sonar_i.h"
+#include "claudeogotchi_i.h"
 #include <notification/notification_messages.h>
 
 /* Debounce window: rapid PreToolUse/PostToolUse churn must not buzz. Only true
@@ -63,12 +63,12 @@ static const NotificationSequence seq_done_vibro = {
     NULL,
 };
 
-void sonar_notify_transition(Sonar* app, uint8_t old_state, uint8_t new_state) {
+void claudeogotchi_notify_transition(Claudeogotchi* app, uint8_t old_state, uint8_t new_state) {
     if(old_state == new_state) return; /* no transition: no haptics */
 
     /* Only these two transitions are notable per SPEC §3.3. */
-    bool to_approval = new_state == SONAR_STATE_WAITING_APPROVAL;
-    bool to_done = new_state == SONAR_STATE_DONE;
+    bool to_approval = new_state == CLAUDEOGOTCHI_STATE_WAITING_APPROVAL;
+    bool to_done = new_state == CLAUDEOGOTCHI_STATE_DONE;
     if(!to_approval && !to_done) return;
 
     uint32_t now = furi_get_tick();

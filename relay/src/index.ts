@@ -62,12 +62,12 @@ async function main() {
   const scheme = opts.tls ? "https/wss" : "http/ws";
   // eslint-disable-next-line no-console
   console.log(
-    `[sonar-relay] listening ${scheme} on ${host}:${relay.port} ` +
+    `[claudeogotchi-relay] listening ${scheme} on ${host}:${relay.port} ` +
       `(${selfHost ? "self-host" : "hosted"}, heartbeat ${heartbeatMs}ms)`,
   );
   if (!opts.tls && !opts.allowInsecure) {
     console.log(
-      "[sonar-relay] ingest requires x-forwarded-proto: https (run behind a TLS proxy)",
+      "[claudeogotchi-relay] ingest requires x-forwarded-proto: https (run behind a TLS proxy)",
     );
   }
 
@@ -80,6 +80,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error("[sonar-relay] fatal:", e);
+  console.error("[claudeogotchi-relay] fatal:", e);
   process.exit(1);
 });

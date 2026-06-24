@@ -3,4 +3,4 @@
  * drift. ufbt compiles with this directory on the include path, and this
  * relative include resolves against this file's own location.
  */
-#include "../proto/sonar_uart.h"
+#include "../proto/claudeogotchi_uart.h"

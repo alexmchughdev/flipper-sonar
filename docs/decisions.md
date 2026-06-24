@@ -5,7 +5,7 @@ of context each; this is a log, not a discussion.
 
 ## Relay
 - **Language: TypeScript on Node.** SPEC says "fork the Rust tunnel from
-  flipper-mcp" but the *contract* (reverse WS, topic = sonar ID, ingest POST,
+  flipper-mcp" but the *contract* (reverse WS, topic = claudeogotchi ID, ingest POST,
   heartbeat, last-state snapshot) is what matters and is reproduced faithfully.
   TS keeps the relay, installer, and e2e tests in one toolchain, lowers the
   contribution bar, and the transport is a thin `ws` server. The reverse-WS
@@ -40,12 +40,12 @@ of context each; this is a log, not a discussion.
   §4.1 suggests the `http` hook type, but the hard rule "cwd never leaves the
   host as more than a basename, enforced in code" requires stripping to happen
   ON the host before transmission. A tiny zero-dep Node poster
-  (`sonar-hook.mjs`) does the basename reduction and never reads
+  (`claudeogotchi-hook.mjs`) does the basename reduction and never reads
   `transcript_path`, then POSTs. The relay enforces the same contract again as
   defense in depth.
 - **User-level settings by default** (`~/.claude/settings.json`) so telemetry
   works from any cwd; `--project` targets `./.claude/settings.json`.
-- **Sidecar manifest** (`~/.claude/flipper-sonar/install.json`) records exactly
+- **Sidecar manifest** (`~/.claude/flipper-claudeogotchi/install.json`) records exactly
   what keys/hooks the installer added, so `--uninstall` is precise and never
   removes the user's unrelated hooks or settings.
 
@@ -72,7 +72,7 @@ of context each; this is a log, not a discussion.
 
 ## No-board USB mode
 - **Link setting: Board (GPIO/ESP32) or USB.** USB mode lets the Flipper run
-  with no WiFi board: a host-side `sonar-usb-bridge.mjs` subscribes to the relay
+  with no WiFi board: a host-side `claudeogotchi-usb-bridge.mjs` subscribes to the relay
   and writes UART frames to the Flipper's USB serial. Works for remote Claude
   Code too, since the bridge machine does the networking.
 - **USB mode uses the dual CDC config**, not single. The Flipper CLI/RPC stays
@@ -87,6 +87,6 @@ of context each; this is a log, not a discussion.
   there's no "app too new" prompt. See [[../README]] / Makefile.
 
 ## Session selection
-- When multiple `session_id`s post to one sonar ID, the relay forwards all but
+- When multiple `session_id`s post to one claudeogotchi ID, the relay forwards all but
   tags each frame with a 1-byte session slot. The FAP tracks a selectable
   session; default is most-recently-active.

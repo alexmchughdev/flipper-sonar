@@ -11,6 +11,9 @@
 import { quote } from "./quote.js";
 
 const HOOK_EVENTS = [
+  // Turn start — sets the run timer at the same moment the terminal's spinner
+  // timer starts, so the Flipper timer isn't behind.
+  { event: "UserPromptSubmit", matcher: "", state: "working" },
   { event: "PreToolUse", matcher: "", state: "working" },
   { event: "PostToolUse", matcher: "", state: "working" },
   { event: "Stop", matcher: "", state: "done" },
@@ -19,7 +22,7 @@ const HOOK_EVENTS = [
   { event: "SessionStart", matcher: "", state: "idle" },
 ];
 
-function hookCommand(nodeBin, posterPath, event, state, sonarId, relayOrigin) {
+function hookCommand(nodeBin, posterPath, event, state, claudeogotchiId, relayOrigin) {
   return [
     quote(nodeBin),
     quote(posterPath),
@@ -27,19 +30,19 @@ function hookCommand(nodeBin, posterPath, event, state, sonarId, relayOrigin) {
     event,
     "--state",
     state,
-    "--sonar",
-    sonarId,
+    "--claudeogotchi",
+    claudeogotchiId,
     "--relay",
     quote(relayOrigin),
   ].join(" ");
 }
 
-function statuslineCommand(nodeBin, statuslinePath, sonarId, relayOrigin) {
+function statuslineCommand(nodeBin, statuslinePath, claudeogotchiId, relayOrigin) {
   return [
     quote(nodeBin),
     quote(statuslinePath),
-    "--sonar",
-    sonarId,
+    "--claudeogotchi",
+    claudeogotchiId,
     "--relay",
     quote(relayOrigin),
   ].join(" ");
@@ -76,7 +79,7 @@ export function stripManagedHooks(settings, posterPath) {
  * Does not mutate the input.
  */
 export function applyInstall(settings, opts) {
-  const { nodeBin, posterPath, statuslinePath, sonarId, relayOrigin } = opts;
+  const { nodeBin, posterPath, statuslinePath, claudeogotchiId, relayOrigin } = opts;
 
   // Start from a copy with our prior hooks stripped (idempotent re-install).
   let out = stripManagedHooks(settings, posterPath);
@@ -88,7 +91,7 @@ export function applyInstall(settings, opts) {
       hooks: [
         {
           type: "command",
-          command: hookCommand(nodeBin, posterPath, event, state, sonarId, relayOrigin),
+          command: hookCommand(nodeBin, posterPath, event, state, claudeogotchiId, relayOrigin),
         },
       ],
     };
@@ -99,7 +102,7 @@ export function applyInstall(settings, opts) {
   // Statusline wrapper.
   out.statusLine = {
     type: "command",
-    command: statuslineCommand(nodeBin, statuslinePath, sonarId, relayOrigin),
+    command: statuslineCommand(nodeBin, statuslinePath, claudeogotchiId, relayOrigin),
     padding: 0,
   };
 
@@ -118,7 +121,7 @@ export function applyInstall(settings, opts) {
   const manifest = {
     posterPath,
     statuslinePath,
-    sonarId,
+    claudeogotchiId,
     relayOrigin,
     addedAttribution,
   };

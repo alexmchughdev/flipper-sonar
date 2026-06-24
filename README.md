@@ -46,7 +46,7 @@ Flash the ESP32-S2 WiFi Dev Board, seat it on the GPIO header, then in the FAP:
 **WiFi Setup** → enter SSID/password. Pair the host where Claude Code runs:
 
 ```bash
-npx github:alexmchughdev/flipper-sonar --pair <CODE> --relay https://<your-relay>
+npx github:alexmchughdev/flipper-claudeogotchi --pair <CODE> --relay https://<your-relay>
 ```
 
 Identical for local, SSH, and dev containers — that's what makes remote work.

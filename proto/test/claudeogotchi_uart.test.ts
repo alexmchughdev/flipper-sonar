@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import * as u from "../sonar_uart.ts";
+import * as u from "../claudeogotchi_uart.ts";
 
 test("crc8 known vectors (poly 0x31, MSB-first, init 0x00)", () => {
   // Check value for THIS variant (poly 0x31, init 0x00, no reflection) over the
@@ -75,7 +75,7 @@ test("provision round-trips", () => {
   assert.equal(d.ssid, "HomeWiFi");
   assert.equal(d.pass, "pass123");
   assert.equal(d.relayUrl, "wss://r/egress");
-  assert.equal(d.sonarId, "AB12CD");
+  assert.equal(d.claudeogotchiId, "AB12CD");
 });
 
 test("RESYNC: non-SOF garbage before a frame is skipped cleanly", () => {

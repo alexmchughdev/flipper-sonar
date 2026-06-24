@@ -1,33 +1,33 @@
-#include "sonar_i.h"
+#include "claudeogotchi_i.h"
 #include <string.h>
 
 /*
  * WiFi provisioning flow: SSID -> password -> push provisioning frame to the
- * ESP32 over UART -> show the sonar ID. Captive portals cannot be completed by
+ * ESP32 over UART -> show the claudeogotchi ID. Captive portals cannot be completed by
  * a headless ESP32, so this is explicitly a "join WPA network" path; the portal
  * workaround (phone hotspot / travel router) is surfaced as on-device help.
  */
 
 static void text_input_done_cb(void* ctx) {
-    Sonar* app = ctx;
-    sonar_wifi_setup_text_done(app);
+    Claudeogotchi* app = ctx;
+    claudeogotchi_wifi_setup_text_done(app);
 }
 
-static void start_text_input(Sonar* app, const char* header) {
+static void start_text_input(Claudeogotchi* app, const char* header) {
     text_input_reset(app->text_input);
     text_input_set_header_text(app->text_input, header);
     text_input_set_result_callback(
         app->text_input, text_input_done_cb, app, app->text_buf, sizeof(app->text_buf), true);
-    view_dispatcher_switch_to_view(app->view_dispatcher, SonarViewTextInput);
+    view_dispatcher_switch_to_view(app->view_dispatcher, ClaudeogotchiViewTextInput);
 }
 
-void sonar_wifi_setup_start(Sonar* app) {
+void claudeogotchi_wifi_setup_start(Claudeogotchi* app) {
     app->setup_stage = SetupStageSsid;
     app->text_buf[0] = '\0';
     start_text_input(app, "WPA Wi-Fi SSID");
 }
 
-void sonar_wifi_setup_text_done(Sonar* app) {
+void claudeogotchi_wifi_setup_text_done(Claudeogotchi* app) {
     if(app->setup_stage == SetupStageSsid) {
         strlcpy(app->ssid_buf, app->text_buf, sizeof(app->ssid_buf));
         app->setup_stage = SetupStagePass;
@@ -39,27 +39,27 @@ void sonar_wifi_setup_text_done(Sonar* app) {
         strlcpy(app->pass_buf, app->text_buf, sizeof(app->pass_buf));
         app->setup_stage = SetupStageNone;
 
-        /* Push creds + relay URL + sonar ID to the ESP32, persist prefs. */
-        sonar_worker_send_provision(app);
-        sonar_config_save(&app->config);
+        /* Push creds + relay URL + claudeogotchi ID to the ESP32, persist prefs. */
+        claudeogotchi_worker_send_provision(app);
+        claudeogotchi_config_save(&app->config);
 
-        sonar_show_paired_popup(app);
+        claudeogotchi_show_paired_popup(app);
     }
 }
 
 static void popup_back_to_menu(void* ctx) {
-    Sonar* app = ctx;
-    view_dispatcher_switch_to_view(app->view_dispatcher, SonarViewMenu);
+    Claudeogotchi* app = ctx;
+    view_dispatcher_switch_to_view(app->view_dispatcher, ClaudeogotchiViewMenu);
 }
 
-void sonar_show_paired_popup(Sonar* app) {
+void claudeogotchi_show_paired_popup(Claudeogotchi* app) {
     static char msg[96];
     snprintf(
         msg,
         sizeof(msg),
         "ID: %s\nRun installer:\nnpx ... --pair %s",
-        app->config.sonar_id,
-        app->config.sonar_id);
+        app->config.claudeogotchi_id,
+        app->config.claudeogotchi_id);
     popup_reset(app->popup);
     popup_set_header(app->popup, "Paired", 64, 4, AlignCenter, AlignTop);
     popup_set_text(app->popup, msg, 64, 20, AlignCenter, AlignTop);
@@ -67,10 +67,10 @@ void sonar_show_paired_popup(Sonar* app) {
     popup_set_context(app->popup, app);
     popup_set_timeout(app->popup, 8000);
     popup_enable_timeout(app->popup);
-    view_dispatcher_switch_to_view(app->view_dispatcher, SonarViewPopup);
+    view_dispatcher_switch_to_view(app->view_dispatcher, ClaudeogotchiViewPopup);
 }
 
-void sonar_show_portal_help(Sonar* app) {
+void claudeogotchi_show_portal_help(Claudeogotchi* app) {
     popup_reset(app->popup);
     popup_set_header(app->popup, "Captive portal", 64, 2, AlignCenter, AlignTop);
     popup_set_text(
@@ -84,5 +84,5 @@ void sonar_show_portal_help(Sonar* app) {
     popup_set_context(app->popup, app);
     popup_set_timeout(app->popup, 10000);
     popup_enable_timeout(app->popup);
-    view_dispatcher_switch_to_view(app->view_dispatcher, SonarViewPopup);
+    view_dispatcher_switch_to_view(app->view_dispatcher, ClaudeogotchiViewPopup);
 }

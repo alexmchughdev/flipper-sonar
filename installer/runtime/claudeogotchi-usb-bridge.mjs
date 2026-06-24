@@ -8,11 +8,11 @@
  * Works for local, SSH, and dev-container Claude Code, because THIS machine
  * reaches the relay over the network exactly like the ESP32 would.
  *
- *   node sonar-usb-bridge.mjs --sonar AB12CD --relay wss://my.relay
- *   node sonar-usb-bridge.mjs --sonar AB12CD --relay http://192.168.1.50:8787 --port /dev/cu.usbmodemXXXX
+ *   node claudeogotchi-usb-bridge.mjs --claudeogotchi AB12CD --relay wss://my.relay
+ *   node claudeogotchi-usb-bridge.mjs --claudeogotchi AB12CD --relay http://192.168.1.50:8787 --port /dev/cu.usbmodemXXXX
  *
  * Zero dependencies (Node stdlib + global WebSocket). The protocol encoder is
- * inlined here so the deployed script is standalone (mirror of proto/sonar_uart).
+ * inlined here so the deployed script is standalone (mirror of proto/claudeogotchi_uart).
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -30,9 +30,9 @@ function parseArgs(argv) {
   return a;
 }
 const args = parseArgs(process.argv.slice(2));
-const sonarId = args.sonar;
-if (!sonarId) {
-  console.error("usage: sonar-usb-bridge --sonar <ID> --relay <url> [--port <dev>]");
+const claudeogotchiId = args.claudeogotchi;
+if (!claudeogotchiId) {
+  console.error("usage: claudeogotchi-usb-bridge --claudeogotchi <ID> --relay <url> [--port <dev>]");
   process.exit(1);
 }
 
@@ -45,9 +45,9 @@ function wsOrigin(input) {
     u.protocol === "https:" || u.protocol === "wss:" ? "wss:" : "ws:";
   return `${proto}//${u.host}`;
 }
-const egressUrl = `${wsOrigin(args.relay)}/egress/${sonarId}`;
+const egressUrl = `${wsOrigin(args.relay)}/egress/${claudeogotchiId}`;
 
-// ---- protocol encoder (mirror of proto/sonar_uart.h) ----
+// ---- protocol encoder (mirror of proto/claudeogotchi_uart.h) ----
 const SOF = 0x7e, T_STATS = 0x01, T_EVENT = 0x02, T_HEARTBEAT = 0x04;
 const STATE = { idle: 0, working: 1, "waiting-approval": 2, "waiting-input": 3, done: 4 };
 const F_CTX = 1, F_5H = 2, F_7D = 4, F_COST = 8, F_MODEL = 16, F_TOKENS = 32;
@@ -124,7 +124,7 @@ function detectPort() {
     )
     .map((f) => `${dir}/${f}`);
   // In Link=USB mode the FAP exposes a dual CDC: channel 0 stays the Flipper
-  // CLI, channel 1 is Sonar's data. The data node is the higher-numbered one,
+  // CLI, channel 1 is Claudeogotchi's data. The data node is the higher-numbered one,
   // so prefer Flipper nodes and, among them, the highest trailing number.
   const trailing = (s) => {
     const m = s.match(/(\d+)\D*$/);
@@ -217,5 +217,5 @@ function scheduleReconnect() {
   backoff = Math.min(backoff * 2, 30000);
 }
 
-console.log(`[usb-bridge] sonar ${sonarId} -> ${egressUrl}`);
+console.log(`[usb-bridge] claudeogotchi ${claudeogotchiId} -> ${egressUrl}`);
 connect();

@@ -1,4 +1,4 @@
-#include "sonar_config.h"
+#include "claudeogotchi_config.h"
 #include <string.h>
 #include <storage/storage.h>
 #include <flipper_format/flipper_format.h>
@@ -7,19 +7,19 @@
 #define CONFIG_HEADER "Flipper Claudeogotchi Config"
 #define CONFIG_VERSION 1
 
-void sonar_config_default(SonarConfig* c) {
+void claudeogotchi_config_default(ClaudeogotchiConfig* c) {
     memset(c, 0, sizeof(*c));
     /* Placeholder hosted relay; overridden by the installer's --relay or by
      * re-provisioning. See docs/blocked.md. */
-    strlcpy(c->relay_url, "wss://relay.flipper-sonar.dev", sizeof(c->relay_url));
+    strlcpy(c->relay_url, "wss://relay.flipper-claudeogotchi.dev", sizeof(c->relay_url));
     c->haptics = true;
     c->sound = true;
-    c->link_mode = SONAR_LINK_MODE_BOARD;
+    c->link_mode = CLAUDEOGOTCHI_LINK_MODE_BOARD;
     c->tracked_session = 0;
 }
 
-bool sonar_config_load(SonarConfig* c) {
-    sonar_config_default(c);
+bool claudeogotchi_config_load(ClaudeogotchiConfig* c) {
+    claudeogotchi_config_default(c);
     Storage* storage = furi_record_open(RECORD_STORAGE);
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     bool ok = false;
@@ -27,12 +27,12 @@ bool sonar_config_load(SonarConfig* c) {
 
     do {
         uint32_t version;
-        if(!flipper_format_file_open_existing(ff, SONAR_CONFIG_PATH)) break;
+        if(!flipper_format_file_open_existing(ff, CLAUDEOGOTCHI_CONFIG_PATH)) break;
         if(!flipper_format_read_header(ff, tmp, &version)) break;
         if(furi_string_cmp_str(tmp, CONFIG_HEADER) != 0) break;
 
-        if(flipper_format_read_string(ff, "sonar_id", tmp))
-            strlcpy(c->sonar_id, furi_string_get_cstr(tmp), sizeof(c->sonar_id));
+        if(flipper_format_read_string(ff, "claudeogotchi_id", tmp))
+            strlcpy(c->claudeogotchi_id, furi_string_get_cstr(tmp), sizeof(c->claudeogotchi_id));
         if(flipper_format_read_string(ff, "relay_url", tmp))
             strlcpy(c->relay_url, furi_string_get_cstr(tmp), sizeof(c->relay_url));
 
@@ -51,15 +51,15 @@ bool sonar_config_load(SonarConfig* c) {
     return ok;
 }
 
-bool sonar_config_save(const SonarConfig* c) {
+bool claudeogotchi_config_save(const ClaudeogotchiConfig* c) {
     Storage* storage = furi_record_open(RECORD_STORAGE);
     FlipperFormat* ff = flipper_format_file_alloc(storage);
     bool ok = false;
 
     do {
-        if(!flipper_format_file_open_always(ff, SONAR_CONFIG_PATH)) break;
+        if(!flipper_format_file_open_always(ff, CLAUDEOGOTCHI_CONFIG_PATH)) break;
         if(!flipper_format_write_header_cstr(ff, CONFIG_HEADER, CONFIG_VERSION)) break;
-        if(!flipper_format_write_string_cstr(ff, "sonar_id", c->sonar_id)) break;
+        if(!flipper_format_write_string_cstr(ff, "claudeogotchi_id", c->claudeogotchi_id)) break;
         if(!flipper_format_write_string_cstr(ff, "relay_url", c->relay_url)) break;
         uint32_t u32 = c->haptics ? 1 : 0;
         if(!flipper_format_write_uint32(ff, "haptics", &u32, 1)) break;

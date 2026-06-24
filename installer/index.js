@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Flipper Sonar installer. Runs on the machine where Claude Code runs (local,
+ * Flipper Claudeogotchi installer. Runs on the machine where Claude Code runs (local,
  * SSH box, or inside a dev container) and edits THAT environment's Claude Code
  * settings — never a remote laptop's.
  *
- *   npx github:alexmchughdev/flipper-sonar --pair AB12CD
- *   npx github:alexmchughdev/flipper-sonar --pair AB12CD --relay https://my.relay
- *   npx github:alexmchughdev/flipper-sonar --uninstall
+ *   npx github:alexmchughdev/flipper-claudeogotchi --pair AB12CD
+ *   npx github:alexmchughdev/flipper-claudeogotchi --pair AB12CD --relay https://my.relay
+ *   npx github:alexmchughdev/flipper-claudeogotchi --uninstall
  *
  * Flags:
- *   --pair <ID>     sonar pairing code (6 Crockford base32 chars)
+ *   --pair <ID>     claudeogotchi pairing code (6 Crockford base32 chars)
  *   --relay <url>   relay origin (https/wss/host); default hosted placeholder
  *   --project       target ./.claude/settings.json instead of ~/.claude
  *   --uninstall     cleanly remove everything the installer added
@@ -22,8 +22,8 @@ import { fileURLToPath } from "node:url";
 import { applyInstall, applyUninstall } from "./lib/settings.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_RELAY = "https://relay.flipper-sonar.dev";
-const SONAR_ID_RE = /^[0-9A-HJKMNP-TV-Z]{6}$/;
+const DEFAULT_RELAY = "https://relay.flipper-claudeogotchi.dev";
+const CLAUDEOGOTCHI_ID_RE = /^[0-9A-HJKMNP-TV-Z]{6}$/;
 
 function parseArgs(argv) {
   const a = {};
@@ -66,7 +66,7 @@ function settingsPath(useProject) {
 }
 
 function runtimeDir() {
-  return path.join(os.homedir(), ".claude", "flipper-sonar");
+  return path.join(os.homedir(), ".claude", "flipper-claudeogotchi");
 }
 
 function readJson(file) {
@@ -85,7 +85,7 @@ function writeJson(file, obj) {
 function deployRuntime() {
   const dir = runtimeDir();
   fs.mkdirSync(dir, { recursive: true });
-  const files = ["sonar-hook.mjs", "sonar-statusline.mjs", "sonar-usb-bridge.mjs"];
+  const files = ["claudeogotchi-hook.mjs", "claudeogotchi-statusline.mjs", "claudeogotchi-usb-bridge.mjs"];
   const out = {};
   for (const f of files) {
     const src = path.join(__dirname, "runtime", f);
@@ -98,18 +98,18 @@ function deployRuntime() {
 
 function help() {
   process.stdout.write(
-    `Flipper Sonar installer
+    `Flipper Claudeogotchi installer
 
-  --pair <ID>     sonar pairing code (6 chars), required for install
+  --pair <ID>     claudeogotchi pairing code (6 chars), required for install
   --relay <url>   relay origin (https/wss/host); default ${DEFAULT_RELAY}
   --project       edit ./.claude/settings.json instead of ~/.claude
   --uninstall     remove everything the installer added
   --help
 
 Examples:
-  npx github:alexmchughdev/flipper-sonar --pair AB12CD
-  npx github:alexmchughdev/flipper-sonar --pair AB12CD --relay https://my.relay
-  npx github:alexmchughdev/flipper-sonar --uninstall
+  npx github:alexmchughdev/flipper-claudeogotchi --pair AB12CD
+  npx github:alexmchughdev/flipper-claudeogotchi --pair AB12CD --relay https://my.relay
+  npx github:alexmchughdev/flipper-claudeogotchi --uninstall
 `,
   );
 }
@@ -133,9 +133,9 @@ function main() {
     writeJson(targetPath, cleaned);
     // Remove deployed runtime + manifest.
     for (const f of [
-      "sonar-hook.mjs",
-      "sonar-statusline.mjs",
-      "sonar-usb-bridge.mjs",
+      "claudeogotchi-hook.mjs",
+      "claudeogotchi-statusline.mjs",
+      "claudeogotchi-usb-bridge.mjs",
       "install.json",
     ]) {
       try {
@@ -144,12 +144,12 @@ function main() {
         /* ignore */
       }
     }
-    process.stdout.write(`Uninstalled Sonar from ${targetPath}\n`);
+    process.stdout.write(`Uninstalled Claudeogotchi from ${targetPath}\n`);
     return;
   }
 
-  const sonarId = args.pair;
-  if (!sonarId || !SONAR_ID_RE.test(sonarId)) {
+  const claudeogotchiId = args.pair;
+  if (!claudeogotchiId || !CLAUDEOGOTCHI_ID_RE.test(claudeogotchiId)) {
     process.stderr.write(
       "Error: --pair <ID> required (6 chars, A-Z0-9 excluding I/L/O/U).\n\n",
     );
@@ -163,9 +163,9 @@ function main() {
 
   const { settings: updated, manifest } = applyInstall(settings, {
     nodeBin: process.execPath,
-    posterPath: deployed["sonar-hook.mjs"],
-    statuslinePath: deployed["sonar-statusline.mjs"],
-    sonarId,
+    posterPath: deployed["claudeogotchi-hook.mjs"],
+    statuslinePath: deployed["claudeogotchi-statusline.mjs"],
+    claudeogotchiId,
     relayOrigin,
   });
 
@@ -174,16 +174,16 @@ function main() {
 
   const wsRelay = relayOrigin.replace(/^http/, "ws");
   process.stdout.write(
-    `Sonar paired.
+    `Claudeogotchi paired.
   settings:  ${sPath}
-  sonar ID:  ${sonarId}
+  claudeogotchi ID:  ${claudeogotchiId}
   relay:     ${relayOrigin}
 
 Start (or restart) Claude Code here; the next turn will light up the Flipper.
 
 No WiFi board? Run the USB bridge on the machine the Flipper is plugged into
 (set the FAP's Settings -> Link to USB first):
-  node "${deployed["sonar-usb-bridge.mjs"]}" --sonar ${sonarId} --relay ${wsRelay}
+  node "${deployed["claudeogotchi-usb-bridge.mjs"]}" --claudeogotchi ${claudeogotchiId} --relay ${wsRelay}
 
 Re-run any time to update; 'npx ... --uninstall' to remove cleanly.
 `,

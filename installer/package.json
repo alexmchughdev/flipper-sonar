@@ -1,10 +1,10 @@
 {
-  "name": "flipper-sonar-installer",
+  "name": "flipper-claudeogotchi-installer",
   "version": "0.1.0",
-  "description": "Installer for the Claude Code side of Flipper Sonar: hooks + statusline + attribution settings.",
+  "description": "Installer for the Claude Code side of Flipper Claudeogotchi: hooks + statusline + attribution settings.",
   "type": "module",
   "bin": {
-    "flipper-sonar": "index.js"
+    "flipper-claudeogotchi": "index.js"
   },
   "main": "index.js",
   "engines": {

@@ -5,14 +5,14 @@ running the **real** host-side scripts and the **real** relay, and reframing to
 UART with the **shared** protocol definition.
 
 ```
-sonar-hook.mjs / sonar-statusline.mjs   (real, spawned with §4 payloads on stdin)
+claudeogotchi-hook.mjs / claudeogotchi-statusline.mjs   (real, spawned with §4 payloads on stdin)
         │  HTTP POST
         ▼
    relay  (real, self-host mode, ephemeral port)
         │  WS egress
         ▼
-   MockBridge   reframes JSON -> UART via proto/sonar_uart.ts (mirror of the
-        │       firmware's sonar_uart.h reframe in ws_client.c)
+   MockBridge   reframes JSON -> UART via proto/claudeogotchi_uart.ts (mirror of the
+        │       firmware's claudeogotchi_uart.h reframe in ws_client.c)
         ▼
    MockFap      decodes with the shared parser, applies null-safe hold-last
 ```

@@ -1,4 +1,4 @@
-#include "sonar_i.h"
+#include "claudeogotchi_i.h"
 #include <string.h>
 
 #define IDX_ID 0
@@ -13,35 +13,35 @@ static const char* const ONOFF[] = {"OFF", "ON"};
 static const char* const LINK_LABELS[] = {"Board", "USB"};
 
 static void link_changed(VariableItem* item) {
-    Sonar* app = variable_item_get_context(item);
+    Claudeogotchi* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     variable_item_set_current_value_text(item, LINK_LABELS[i]);
     app->config.link_mode = i;
-    sonar_config_save(&app->config);
+    claudeogotchi_config_save(&app->config);
     /* Re-acquire the byte source in the new mode immediately. Switching to USB
      * takes over the USB port (the CLI drops while the app runs). */
-    sonar_worker_stop(app);
-    sonar_worker_start(app);
+    claudeogotchi_worker_stop(app);
+    claudeogotchi_worker_start(app);
 }
 
 static void haptics_changed(VariableItem* item) {
-    Sonar* app = variable_item_get_context(item);
+    Claudeogotchi* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     variable_item_set_current_value_text(item, ONOFF[i]);
     app->config.haptics = i != 0;
-    sonar_config_save(&app->config);
+    claudeogotchi_config_save(&app->config);
 }
 
 static void sound_changed(VariableItem* item) {
-    Sonar* app = variable_item_get_context(item);
+    Claudeogotchi* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     variable_item_set_current_value_text(item, ONOFF[i]);
     app->config.sound = i != 0;
-    sonar_config_save(&app->config);
+    claudeogotchi_config_save(&app->config);
 }
 
 static void session_changed(VariableItem* item) {
-    Sonar* app = variable_item_get_context(item);
+    Claudeogotchi* app = variable_item_get_context(item);
     uint8_t i = variable_item_get_current_value_index(item);
     char buf[4];
     snprintf(buf, sizeof(buf), "%u", i);
@@ -50,27 +50,27 @@ static void session_changed(VariableItem* item) {
     furi_mutex_acquire(app->mutex, FuriWaitForever);
     app->config.tracked_session = i;
     furi_mutex_release(app->mutex);
-    sonar_config_save(&app->config);
+    claudeogotchi_config_save(&app->config);
 }
 
 static void settings_enter(void* ctx, uint32_t index) {
-    Sonar* app = ctx;
+    Claudeogotchi* app = ctx;
     if(index == IDX_WIFI) {
-        sonar_wifi_setup_start(app);
+        claudeogotchi_wifi_setup_start(app);
     } else if(index == IDX_PORTAL) {
-        sonar_show_portal_help(app);
+        claudeogotchi_show_portal_help(app);
     }
 }
 
-void sonar_settings_build(Sonar* app) {
+void claudeogotchi_settings_build(Claudeogotchi* app) {
     VariableItemList* list = app->settings_list;
     variable_item_list_reset(list);
     VariableItem* item;
 
-    /* Sonar ID (read-only display) */
-    item = variable_item_list_add(list, "Sonar ID", 1, NULL, app);
+    /* Claudeogotchi ID (read-only display) */
+    item = variable_item_list_add(list, "Claudeogotchi ID", 1, NULL, app);
     variable_item_set_current_value_text(
-        item, app->config.sonar_id[0] ? app->config.sonar_id : "------");
+        item, app->config.claudeogotchi_id[0] ? app->config.claudeogotchi_id : "------");
 
     /* WiFi setup action (board mode only) */
     variable_item_list_add(list, "WiFi Setup", 0, NULL, app);

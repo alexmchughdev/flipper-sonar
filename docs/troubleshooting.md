@@ -20,7 +20,7 @@ The FAP header shows link state: a filled dot (online), animated dots
   a dual CDC, so the Flipper CLI/qFlipper still work on channel 0 while Clawd
   reads telemetry on channel 1.
 - Run the bridge on the machine the Flipper is plugged into: `make bridge
-  ID=<CODE>` (or `node installer/runtime/sonar-usb-bridge.mjs --sonar <CODE>
+  ID=<CODE>` (or `node installer/runtime/claudeogotchi-usb-bridge.mjs --claudeogotchi <CODE>
   --relay ws://host:8787`).
 - If the bridge picks the wrong serial port (writes to the CLI instead of the
   data channel), pass it explicitly: `--port /dev/cu.usbmodemXXXX`. The data
@@ -60,7 +60,7 @@ That's the null-safe path, not a bug:
 
 ## The wrong session is shown
 
-With several Claude Code sessions on one sonar ID, each gets a slot. On the Live
+With several Claude Code sessions on one claudeogotchi ID, each gets a slot. On the Live
 View press **Left/Right** to cycle the tracked session, or set **Settings →
 Session**. The display never switches on its own, so it won't flap.
 
@@ -69,7 +69,7 @@ Session**. The display never switches on its own, so it won't flap.
 - Confirm you ran the installer **where Claude Code runs**, not on a different
   machine.
 - Restart Claude Code so it reloads `settings.json`.
-- Verify hooks landed: look for `sonar-hook.mjs` entries in the target
+- Verify hooks landed: look for `claudeogotchi-hook.mjs` entries in the target
   `~/.claude/settings.json`.
 - Re-run the installer (idempotent). Use `--project` if you keep settings in the
   repo's `.claude/`.
@@ -83,5 +83,5 @@ version honors the `attribution` block.
 
 ## USB conflicts
 
-Sonar uses **USART on pins 13/14**, not the USB/LPUART CLI bridge, so the
-Flipper CLI and qFlipper keep working over USB while Sonar runs.
+Claudeogotchi uses **USART on pins 13/14**, not the USB/LPUART CLI bridge, so the
+Flipper CLI and qFlipper keep working over USB while Claudeogotchi runs.

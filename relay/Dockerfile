@@ -1,4 +1,4 @@
-# Flipper Sonar relay — self-host image.
+# Flipper Claudeogotchi relay — self-host image.
 # Telemetry-only reverse WS tunnel. No database, in-memory last-state per topic.
 FROM node:22-alpine
 

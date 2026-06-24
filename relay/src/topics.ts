@@ -1,5 +1,5 @@
 /**
- * Topic registry. One topic per sonar ID. One logical producer (the CC host,
+ * Topic registry. One topic per claudeogotchi ID. One logical producer (the CC host,
  * possibly several sessions) and one or more consumers (bridges) per topic.
  *
  * Responsibilities:
@@ -31,14 +31,14 @@ interface SessionState {
 }
 
 class Topic {
-  readonly sonarId: string;
+  readonly claudeogotchiId: string;
   private subscribers = new Set<Subscriber>();
   private sessions = new Map<string, SessionState>();
   private slotsUsed = new Set<number>();
   lastActivity = Date.now();
 
-  constructor(sonarId: string) {
-    this.sonarId = sonarId;
+  constructor(claudeogotchiId: string) {
+    this.claudeogotchiId = claudeogotchiId;
   }
 
   get subscriberCount(): number {
@@ -133,10 +133,17 @@ class Topic {
   heartbeat(now: number): void {
     const hb: WireMessage = {
       type: "heartbeat",
-      sonarId: this.sonarId,
+      claudeogotchiId: this.claudeogotchiId,
       ts: Math.floor(now / 1000),
     };
     this.broadcast(encodeWire(hb));
+    // Re-broadcast the last stats per session so a device that restarted (and
+    // whose bridge stayed connected) re-populates its bars within one heartbeat
+    // instead of showing blank until the next turn. Stats only — re-sending
+    // events could re-trigger haptics on a freshly-booted app.
+    for (const s of this.sessions.values()) {
+      if (s.lastStats) this.broadcast(encodeWire(s.lastStats));
+    }
   }
 
   isIdle(now: number, ttlMs: number): boolean {
@@ -157,21 +164,21 @@ export class TopicRegistry {
     this.idleTtlMs = idleTtlMs;
   }
 
-  private get(sonarId: string): Topic {
-    let t = this.topics.get(sonarId);
+  private get(claudeogotchiId: string): Topic {
+    let t = this.topics.get(claudeogotchiId);
     if (!t) {
-      t = new Topic(sonarId);
-      this.topics.set(sonarId, t);
+      t = new Topic(claudeogotchiId);
+      this.topics.set(claudeogotchiId, t);
     }
     return t;
   }
 
   publish(msg: WireMessage): WireMessage {
-    return this.get(msg.sonarId).publish(msg);
+    return this.get(msg.claudeogotchiId).publish(msg);
   }
 
-  subscribe(sonarId: string, sub: Subscriber): () => void {
-    const t = this.get(sonarId);
+  subscribe(claudeogotchiId: string, sub: Subscriber): () => void {
+    const t = this.get(claudeogotchiId);
     t.subscribe(sub);
     return () => t.unsubscribe(sub);
   }
@@ -180,8 +187,8 @@ export class TopicRegistry {
     return this.topics.size;
   }
 
-  inspect(sonarId: string): { subscribers: number; sessions: number } | undefined {
-    const t = this.topics.get(sonarId);
+  inspect(claudeogotchiId: string): { subscribers: number; sessions: number } | undefined {
+    const t = this.topics.get(claudeogotchiId);
     if (!t) return undefined;
     return { subscribers: t.subscriberCount, sessions: t.sessionCount };
   }

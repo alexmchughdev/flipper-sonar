@@ -1,11 +1,11 @@
-#include "sonar_i.h"
+#include "claudeogotchi_i.h"
 #include <gui/elements.h>
 #include <math.h>
 
 #define ANIM_PERIOD_MS 120
 
 typedef struct {
-    Sonar* app;
+    Claudeogotchi* app;
     FuriTimer* timer;
     uint8_t frame; /* animation frame counter */
     uint32_t phrase_key; /* identity of the current phrase slot (session + 3s bucket) */
@@ -66,7 +66,7 @@ static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame
         ".#######.",
     };
     int bob = ((frame / 6) % 2) ? 1 : 0;
-    int sx = (state == SONAR_STATE_WAITING_APPROVAL) ? ((frame % 2) ? 1 : -1) : 0; /* shake */
+    int sx = (state == CLAUDEOGOTCHI_STATE_WAITING_APPROVAL) ? ((frame % 2) ? 1 : -1) : 0; /* shake */
     int ox = cx - (9 * bs) / 2 + sx;
     int oy = cy - (4 * bs) / 2 + bob;
 
@@ -94,7 +94,7 @@ static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame
     int elx = ox + 2 * bs + 1, erx = ox + 6 * bs + 1;
     int ey = oy + bs, ew = 2, eh = bs;
     switch(state) {
-    case SONAR_STATE_IDLE:
+    case CLAUDEOGOTCHI_STATE_IDLE:
         if(((frame / 12) % 6) == 0) { /* blink */
             canvas_draw_box(c, elx, ey + eh / 2, ew + 1, 1);
             canvas_draw_box(c, erx, ey + eh / 2, ew + 1, 1);
@@ -103,15 +103,15 @@ static int draw_creature(Canvas* c, int cx, int cy, uint8_t state, uint8_t frame
             canvas_draw_box(c, erx, ey, ew, eh);
         }
         break;
-    case SONAR_STATE_WAITING_APPROVAL: /* wide eyes */
+    case CLAUDEOGOTCHI_STATE_WAITING_APPROVAL: /* wide eyes */
         canvas_draw_box(c, elx - 1, ey - 1, ew + 2, eh + 2);
         canvas_draw_box(c, erx - 1, ey - 1, ew + 2, eh + 2);
         break;
-    case SONAR_STATE_WAITING_INPUT: /* glance */
+    case CLAUDEOGOTCHI_STATE_WAITING_INPUT: /* glance */
         canvas_draw_box(c, elx + 1, ey, ew, eh);
         canvas_draw_box(c, erx + 1, ey, ew, eh);
         break;
-    case SONAR_STATE_DONE: { /* happy ">  <" chevron eyes */
+    case CLAUDEOGOTCHI_STATE_DONE: { /* happy ">  <" chevron eyes */
         int cw = 3, midy = ey + eh / 2;
         canvas_draw_line(c, ox + 2 * bs, ey, ox + 2 * bs + cw, midy);
         canvas_draw_line(c, ox + 2 * bs + cw, midy, ox + 2 * bs, ey + eh);
@@ -145,16 +145,16 @@ static void draw_minibar(Canvas* c, int y, const char* label, bool valid, uint8_
     canvas_draw_str(c, bx + bw + 3, y + 6, v);
 }
 
-static void draw_link_glyph(Canvas* c, SonarLink link, uint8_t frame) {
+static void draw_link_glyph(Canvas* c, ClaudeogotchiLink link, uint8_t frame) {
     const int gx = 122, gy = 6;
     switch(link) {
-    case SonarLinkOnline:
+    case ClaudeogotchiLinkOnline:
         canvas_draw_disc(c, gx, gy - 2, 2);
         break;
-    case SonarLinkConnecting:
+    case ClaudeogotchiLinkConnecting:
         for(int i = 0; i < (frame % 3) + 1; i++) canvas_draw_dot(c, gx - 4 + i * 3, gy - 2);
         break;
-    case SonarLinkStale:
+    case ClaudeogotchiLinkStale:
         canvas_draw_str(c, gx - 4, gy, "x");
         break;
     }
@@ -170,9 +170,9 @@ static void fmt_tokens(char* out, size_t n, uint32_t t) {
 
 static void main_draw(Canvas* canvas, void* model_v) {
     MainViewModel* vm = model_v;
-    Sonar* app = vm->app;
+    Claudeogotchi* app = vm->app;
 
-    SonarModel m;
+    ClaudeogotchiModel m;
     furi_mutex_acquire(app->mutex, FuriWaitForever);
     m = app->model;
     furi_mutex_release(app->mutex);
@@ -189,25 +189,25 @@ static void main_draw(Canvas* canvas, void* model_v) {
     /* The done celebration face (> <) shows only briefly, then the face reverts
      * to normal even though the state stays 'done'. */
     uint8_t face_state = disp_state;
-    if(disp_state == SONAR_STATE_DONE) {
+    if(disp_state == CLAUDEOGOTCHI_STATE_DONE) {
         bool celebrate = false;
         if(m.state_tick) {
             uint32_t now = furi_get_tick();
             if(now - m.state_tick < furi_ms_to_ticks(3000)) celebrate = true;
         }
-        if(!celebrate) face_state = SONAR_STATE_IDLE;
+        if(!celebrate) face_state = CLAUDEOGOTCHI_STATE_IDLE;
     }
 
     /* Left: the Claude creature */
     int cright = draw_creature(canvas, 24, 28, face_state, vm->frame);
 
     /* Attention glyph next to the sprite: ! when input is needed, ? for approval. */
-    if(disp_state == SONAR_STATE_WAITING_INPUT || disp_state == SONAR_STATE_WAITING_APPROVAL) {
+    if(disp_state == CLAUDEOGOTCHI_STATE_WAITING_INPUT || disp_state == CLAUDEOGOTCHI_STATE_WAITING_APPROVAL) {
         if(vm->frame % 2) { /* blink */
             canvas_set_font(canvas, FontPrimary);
             canvas_draw_str(
                 canvas, cright + 2, 24,
-                disp_state == SONAR_STATE_WAITING_INPUT ? "!" : "?");
+                disp_state == CLAUDEOGOTCHI_STATE_WAITING_INPUT ? "!" : "?");
             canvas_set_font(canvas, FontSecondary);
         }
     }
@@ -220,7 +220,7 @@ static void main_draw(Canvas* canvas, void* model_v) {
     /* Bottom bar: only when there is something to say. Working shows the
      * spinner + verb + timer; input/approval show a status line; idle shows
      * nothing (no bar at all). */
-    if(disp_state == SONAR_STATE_WORKING) {
+    if(disp_state == CLAUDEOGOTCHI_STATE_WORKING) {
         canvas_draw_line(canvas, 0, 50, 127, 50);
         draw_spark(canvas, 6, 57, (float)vm->frame * 0.45f, 5, 3);
 
@@ -254,13 +254,13 @@ static void main_draw(Canvas* canvas, void* model_v) {
                 (unsigned long)(secs % 60));
         }
         canvas_draw_str(canvas, 14, 61, line);
-    } else if(disp_state == SONAR_STATE_WAITING_INPUT) {
+    } else if(disp_state == CLAUDEOGOTCHI_STATE_WAITING_INPUT) {
         canvas_draw_line(canvas, 0, 50, 127, 50);
         canvas_draw_str(canvas, 4, 61, "input needed");
-    } else if(disp_state == SONAR_STATE_WAITING_APPROVAL) {
+    } else if(disp_state == CLAUDEOGOTCHI_STATE_WAITING_APPROVAL) {
         canvas_draw_line(canvas, 0, 50, 127, 50);
         canvas_draw_str(canvas, 4, 61, "approval needed");
-    } else if(disp_state == SONAR_STATE_DONE) {
+    } else if(disp_state == CLAUDEOGOTCHI_STATE_DONE) {
         canvas_draw_line(canvas, 0, 50, 127, 50);
         canvas_draw_str(canvas, 4, 61, "done");
         if(m.tokens_valid) {
@@ -273,7 +273,7 @@ static void main_draw(Canvas* canvas, void* model_v) {
 }
 
 static bool main_input(InputEvent* event, void* ctx) {
-    Sonar* app = ctx;
+    Claudeogotchi* app = ctx;
     if(event->type != InputTypeShort) return false;
 
     if(event->key == InputKeyLeft || event->key == InputKeyRight) {
@@ -291,7 +291,7 @@ static bool main_input(InputEvent* event, void* ctx) {
             }
         }
         furi_mutex_release(app->mutex);
-        sonar_config_save(&app->config);
+        claudeogotchi_config_save(&app->config);
         return true;
     }
     return false;
@@ -303,7 +303,7 @@ static void main_timer_cb(void* ctx) {
 }
 
 static void main_enter(void* ctx) {
-    Sonar* app = ctx;
+    Claudeogotchi* app = ctx;
     View* view = app->main_view;
     with_view_model(
         view,
@@ -316,13 +316,13 @@ static void main_enter(void* ctx) {
 }
 
 static void main_exit(void* ctx) {
-    Sonar* app = ctx;
+    Claudeogotchi* app = ctx;
     View* view = app->main_view;
     with_view_model(
         view, MainViewModel * vm, { if(vm->timer) furi_timer_stop(vm->timer); }, false);
 }
 
-View* sonar_main_view_alloc(Sonar* app) {
+View* claudeogotchi_main_view_alloc(Claudeogotchi* app) {
     View* view = view_alloc();
     view_allocate_model(view, ViewModelTypeLocking, sizeof(MainViewModel));
     with_view_model(
@@ -344,7 +344,7 @@ View* sonar_main_view_alloc(Sonar* app) {
     return view;
 }
 
-void sonar_main_view_free(View* view) {
+void claudeogotchi_main_view_free(View* view) {
     with_view_model(
         view, MainViewModel * vm, { if(vm->timer) furi_timer_free(vm->timer); }, false);
     view_free(view);
