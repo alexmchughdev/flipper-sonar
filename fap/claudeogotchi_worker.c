@@ -1,0 +1,245 @@
+#include "claudeogotchi_i.h"
+#include "claudeogotchi_uart.h"
+#include <expansion/expansion.h>
+#include <furi_hal_usb.h>
+#include <furi_hal_usb_cdc.h>
+
+/* USART on the expansion header = pins 13 (TX) / 14 (RX), the channel that does
+ * not fight the Flipper CLI on the USB/LPUART bridge. */
+#define CLAUDEOGOTCHI_SERIAL_ID FuriHalSerialIdUsart
+#define CLAUDEOGOTCHI_BAUD 115200
+#define RX_STREAM_SIZE 512
+#define RX_STREAM_TRIGGER 1
+#define WORKER_TICK_MS 250
+#define STALE_AFTER_MS 30000 /* 3 missed heartbeats */
+
+/* Board mode: GPIO USART RX. ISR context — only the ISR-safe stream send. */
+static void rx_isr(FuriHalSerialHandle* handle, FuriHalSerialRxEvent ev, void* ctx) {
+    Claudeogotchi* app = ctx;
+    if(ev & FuriHalSerialRxEventData) {
+        uint8_t b = furi_hal_serial_async_rx(handle);
+        furi_stream_buffer_send(app->rx_stream, &b, 1, 0);
+    }
+}
+
+/* USB mode: CDC RX. Runs in USB callback context; drain CDC into the stream
+ * buffer (ISR-safe send) and nothing else.
+ *
+ * We use the DUAL CDC config so the Flipper CLI/RPC keeps working on channel 0
+ * (qFlipper, ufbt, and `storage` all keep functioning) while Claudeogotchi receives its
+ * telemetry on channel 1. This makes USB mode non-destructive: exiting restores
+ * the single-CDC CLI cleanly, and the host bridge writes to the 2nd serial node. */
+#define CLAUDEOGOTCHI_CDC_IF 1
+static void cdc_rx(void* ctx) {
+    Claudeogotchi* app = ctx;
+    if(!app->rx_stream) return;
+    uint8_t buf[64];
+    int32_t n;
+    do {
+        n = furi_hal_cdc_receive(CLAUDEOGOTCHI_CDC_IF, buf, sizeof(buf));
+        if(n > 0) furi_stream_buffer_send(app->rx_stream, buf, (size_t)n, 0);
+    } while(n == (int32_t)sizeof(buf));
+}
+
+static CdcCallbacks claudeogotchi_cdc_cb = {
+    .rx_ep_callback = cdc_rx,
+};
+
+/* Apply one decoded frame to the shared model under the mutex. Returns the
+ * notification transition to fire (old/new state) via out-params; the caller
+ * fires haptics OUTSIDE the lock to keep the critical section short. */
+static void apply_frame(
+    Claudeogotchi* app,
+    const ClaudeogotchiFrame* f,
+    uint8_t* notify_old,
+    uint8_t* notify_new) {
+    *notify_old = *notify_new = CLAUDEOGOTCHI_STATE_IDLE;
+    bool fire = false;
+
+    furi_mutex_acquire(app->mutex, FuriWaitForever);
+    ClaudeogotchiModel* m = &app->model;
+    uint8_t tracked = app->config.tracked_session;
+
+    switch(f->type) {
+    case CLAUDEOGOTCHI_T_STATS: {
+        ClaudeogotchiStats s;
+        if(!claudeogotchi_decode_stats(f->payload, f->payload_len, &s)) break;
+        m->seen_sessions |= (1u << (s.session & 0x1F));
+        m->active_session = s.session;
+        m->last_rx_tick = furi_get_tick();
+        m->link = ClaudeogotchiLinkOnline; /* any data means online (covers connecting + stale) */
+        if(s.session != tracked) break; /* don't flap the display */
+        /* Null-safe: only overwrite a metric when its flag says it's present. */
+        if(s.flags & CLAUDEOGOTCHI_F_CTX) {
+            m->ctx_pct = s.ctx_pct;
+            m->ctx_valid = true;
+        }
+        if(s.flags & CLAUDEOGOTCHI_F_5H) {
+            m->five_pct = s.five_hr_pct;
+            m->five_valid = true;
+        }
+        if(s.flags & CLAUDEOGOTCHI_F_7D) {
+            m->seven_pct = s.seven_day_pct;
+            m->seven_valid = true;
+        }
+        /* cost is intentionally not displayed (usage matters, not $ on subs) */
+        if(s.flags & CLAUDEOGOTCHI_F_MODEL) strlcpy(m->model, s.model, sizeof(m->model));
+        if(s.flags & CLAUDEOGOTCHI_F_TOKENS) {
+            m->tokens = (uint32_t)s.tokens_h * 100u;
+            m->tokens_valid = true;
+        }
+        break;
+    }
+    case CLAUDEOGOTCHI_T_EVENT: {
+        ClaudeogotchiEvent e;
+        if(!claudeogotchi_decode_event(f->payload, f->payload_len, &e)) break;
+        m->seen_sessions |= (1u << (e.session & 0x1F));
+        m->active_session = e.session;
+        m->last_rx_tick = furi_get_tick();
+        m->link = ClaudeogotchiLinkOnline; /* any data means online (covers connecting + stale) */
+        if(e.session != tracked) break;
+        if(e.state != m->state) {
+            *notify_old = m->state;
+            *notify_new = e.state;
+            fire = true;
+            m->state_tick = furi_get_tick(); /* for the done celebration timeout */
+            /* Start the run timer when work begins. */
+            if(e.state == CLAUDEOGOTCHI_STATE_WORKING) m->work_start_tick = furi_get_tick();
+        }
+        m->state = e.state;
+        strlcpy(m->tool, e.tool, sizeof(m->tool));
+        strlcpy(m->project, e.project, sizeof(m->project));
+        break;
+    }
+    case CLAUDEOGOTCHI_T_LINK: {
+        uint8_t link;
+        if(claudeogotchi_decode_link(f->payload, f->payload_len, &link)) {
+            m->link = (ClaudeogotchiLink)link;
+            if(link == ClaudeogotchiLinkOnline) m->last_rx_tick = furi_get_tick();
+        }
+        break;
+    }
+    case CLAUDEOGOTCHI_T_HEARTBEAT:
+        m->last_rx_tick = furi_get_tick();
+        m->link = ClaudeogotchiLinkOnline; /* any data means online (covers connecting + stale) */
+        break;
+    default:
+        break;
+    }
+    furi_mutex_release(app->mutex);
+
+    if(!fire) {
+        *notify_old = *notify_new; /* signal "no transition" to caller */
+    }
+}
+
+static void check_stale(Claudeogotchi* app) {
+    furi_mutex_acquire(app->mutex, FuriWaitForever);
+    if(app->model.link == ClaudeogotchiLinkOnline && app->model.last_rx_tick != 0 &&
+       furi_get_tick() - app->model.last_rx_tick > furi_ms_to_ticks(STALE_AFTER_MS)) {
+        app->model.link = ClaudeogotchiLinkStale;
+    }
+    furi_mutex_release(app->mutex);
+}
+
+static int32_t worker_thread(void* ctx) {
+    Claudeogotchi* app = ctx;
+    ClaudeogotchiParser parser;
+    claudeogotchi_parser_reset(&parser);
+    uint8_t chunk[64];
+    ClaudeogotchiFrame frame;
+
+    while(app->worker_running) {
+        /* Blocks until bytes arrive (the ISR wakes us) or the tick elapses, so
+         * stale-detection still runs on a quiet link. */
+        size_t n = furi_stream_buffer_receive(
+            app->rx_stream, chunk, sizeof(chunk), furi_ms_to_ticks(WORKER_TICK_MS));
+        bool got_frame = false;
+        for(size_t i = 0; i < n; i++) {
+            if(claudeogotchi_parser_push(&parser, chunk[i], &frame)) {
+                uint8_t old_s, new_s;
+                apply_frame(app, &frame, &old_s, &new_s);
+                if(old_s != new_s) claudeogotchi_notify_transition(app, old_s, new_s);
+                got_frame = true;
+            }
+        }
+        /* Paint immediately on data instead of waiting for the animation tick. */
+        if(got_frame) claudeogotchi_main_view_refresh(app->main_view);
+        check_stale(app);
+    }
+    return 0;
+}
+
+void claudeogotchi_worker_start(Claudeogotchi* app) {
+    app->rx_stream = furi_stream_buffer_alloc(RX_STREAM_SIZE, RX_STREAM_TRIGGER);
+    app->worker_running = true;
+    app->worker = furi_thread_alloc_ex("ClaudeogotchiWorker", 2048, worker_thread, app);
+    furi_thread_start(app->worker);
+
+    if(app->config.link_mode == CLAUDEOGOTCHI_LINK_MODE_USB) {
+        /* No board: take over USB CDC and receive frames from a host bridge.
+         * This drops the USB CLI/RPC while the app runs (that's expected). */
+        app->usb_prev = furi_hal_usb_get_config();
+        furi_hal_usb_unlock();
+        if(furi_hal_usb_set_config(&usb_cdc_dual, NULL)) {
+            furi_hal_cdc_set_callbacks(CLAUDEOGOTCHI_CDC_IF, &claudeogotchi_cdc_cb, app);
+        }
+        return;
+    }
+
+    /* Board mode. The Expansion Module service owns USART (pins 13/14) by
+     * default to detect add-on boards. Disable it so we can use the port; we
+     * re-enable on exit. */
+    Expansion* expansion = furi_record_open(RECORD_EXPANSION);
+    expansion_disable(expansion);
+    furi_record_close(RECORD_EXPANSION);
+
+    /* Acquire gracefully: if the port is still busy, run without UART rather
+     * than aborting the whole system (a failed furi_check reboots the Flipper).
+     * The link simply stays "connecting" until the port frees up. */
+    app->serial = furi_hal_serial_control_acquire(CLAUDEOGOTCHI_SERIAL_ID);
+    if(app->serial) {
+        furi_hal_serial_init(app->serial, CLAUDEOGOTCHI_BAUD);
+        furi_hal_serial_async_rx_start(app->serial, rx_isr, app, false);
+    }
+}
+
+void claudeogotchi_worker_stop(Claudeogotchi* app) {
+    /* Stop the byte source first so nothing pushes to a freed stream. */
+    if(app->serial) { /* board mode */
+        furi_hal_serial_async_rx_stop(app->serial);
+        furi_hal_serial_deinit(app->serial);
+        furi_hal_serial_control_release(app->serial);
+        app->serial = NULL;
+
+        Expansion* expansion = furi_record_open(RECORD_EXPANSION);
+        expansion_enable(expansion); /* hand USART back to the expansion service */
+        furi_record_close(RECORD_EXPANSION);
+    }
+    if(app->usb_prev) { /* USB mode: restore the previous USB config (CLI/RPC) */
+        furi_hal_cdc_set_callbacks(CLAUDEOGOTCHI_CDC_IF, NULL, NULL);
+        furi_hal_usb_set_config(app->usb_prev, NULL);
+        app->usb_prev = NULL;
+    }
+    if(app->worker) {
+        /* The worker re-checks worker_running every WORKER_TICK_MS, so it exits
+         * within one tick of clearing the flag. */
+        app->worker_running = false;
+        furi_thread_join(app->worker);
+        furi_thread_free(app->worker);
+        app->worker = NULL;
+    }
+    if(app->rx_stream) {
+        furi_stream_buffer_free(app->rx_stream);
+        app->rx_stream = NULL;
+    }
+}
+
+void claudeogotchi_worker_send_provision(Claudeogotchi* app) {
+    if(!app->serial) return;
+    uint8_t buf[CLAUDEOGOTCHI_MAX_FRAME];
+    size_t n = claudeogotchi_build_provision(
+        app->ssid_buf, app->pass_buf, app->config.relay_url, app->config.claudeogotchi_id, buf,
+        sizeof(buf));
+    if(n) furi_hal_serial_tx(app->serial, buf, n);
+}

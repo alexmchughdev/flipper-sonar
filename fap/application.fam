@@ -1,0 +1,14 @@
+App(
+    appid="claudeogotchi",
+    name="Claudeogotchi",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="claudeogotchi_app",
+    stack_size=4 * 1024,
+    fap_category="Tools",
+    fap_author="flipper-claudeogotchi",
+    fap_version="0.1",
+    fap_description="Claudeogotchi: a Claude Code virtual pet - Clawd, bars, vibro/chime.",
+    # fap_icon is optional for local builds; required for the App Catalog. See
+    # docs/blocked.md for catalog submission status.
+    requires=["gui", "notification"],
+)

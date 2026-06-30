@@ -1,0 +1,17 @@
+{
+  "name": "Flipper Claudeogotchi Bridge",
+  "version": "0.1.0",
+  "home_assistant_domain": "",
+  "funding_url": "",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S2",
+      "parts": [
+        { "path": "bootloader.bin", "offset": 4096 },
+        { "path": "partition-table.bin", "offset": 32768 },
+        { "path": "claudeogotchi_bridge.bin", "offset": 65536 }
+      ]
+    }
+  ]
+}
